@@ -7,6 +7,7 @@ export interface GenerateRequest {
   stream?: boolean;
   context?: number[];
   instructions?: string;
+  messageHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
   options?: {
     temperature?: number;
     top_p?: number;
@@ -175,10 +176,22 @@ class AnthropicProviderService extends BaseProviderService {
       }
 
       const messages = [];
+      
+      // Add system message with instructions if provided
       if (request.instructions) {
         messages.push({ role: 'system', content: request.instructions });
       }
+
+      // Add message history to maintain context
+      if (request.messageHistory && request.messageHistory.length > 0) {
+        console.log(`Adding ${request.messageHistory.length} messages to context`);
+        messages.push(...request.messageHistory);
+      }
+
+      // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
+
+      console.log(`Sending ${messages.length} messages to Anthropic API`);
 
       const response = await axios.post(this.getApiUrl('/messages'), {
         model: request.model,

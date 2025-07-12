@@ -97,6 +97,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     setMessageCount(0);
   };
 
+  // Helper function to build message history for context-aware providers
+  const buildMessageHistory = (messages: ChatMessage[]): Array<{ role: 'user' | 'assistant'; content: string }> => {
+    // Skip the welcome message and current temp message
+    const conversationMessages = messages.filter(msg => 
+      !msg.text.includes('¡Hola! Soy') && !msg.id.startsWith('temp-') && msg.text.trim() !== ''
+    );
+
+    // Convert to the format expected by APIs like Anthropic
+    // Reverse to get chronological order (oldest first)
+    const history = conversationMessages
+      .slice(0, 10) // Limit to last 10 messages to avoid token limits
+      .reverse()
+      .map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant' as 'user' | 'assistant',
+        content: msg.text
+      }));
+
+    console.log(`Built message history with ${history.length} messages for context`);
+    return history;
+  };
+
   const handleSendMessage = useCallback(async (text: string) => {
     if (!isConnected || !currentProvider) {
       Alert.alert('Sin conexión', 'No se puede conectar con el proveedor de IA');
@@ -161,14 +182,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
       let fullResponse = '';
       
+      // Build message history for context-aware providers (like Anthropic)
+      const messageHistory = buildMessageHistory(messages);
+      
       console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
+      console.log('Message history length:', messageHistory.length);
       
       await providerService.streamResponse(
         currentProvider.id,
         {
           model: settings.selectedModel,
           prompt: text,
-          context: context,
+          context: context, // For Ollama
+          messageHistory: messageHistory, // For Anthropic and others
           instructions: currentAssistant?.instructions,
         },
         (chunk: string) => {
