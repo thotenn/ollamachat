@@ -48,6 +48,21 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [currentProvider]);
 
+  // Sync currentProvider when providers list or selectedProviderId changes
+  // NOTE: Disabled to prevent race conditions with updateSettings
+  // The updateSettings function now handles provider sync directly
+  /*
+  useEffect(() => {
+    if (providers.length > 0 && settings.selectedProviderId) {
+      const provider = providers.find(p => p.id === settings.selectedProviderId);
+      if (provider && (!currentProvider || currentProvider.id !== provider.id)) {
+        console.log('[SettingsContext] Syncing currentProvider from settings:', provider.name);
+        setCurrentProvider(provider);
+      }
+    }
+  }, [providers, settings.selectedProviderId]);
+  */
+
   const initializeApp = async () => {
     try {
       // Initialize database first
@@ -76,7 +91,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const assistant = assistants.find(a => a.id === parsed.selectedAssistantId);
         
         if (provider) {
+          console.log('[SettingsContext] Setting initial current provider:', provider.name);
           setCurrentProvider(provider);
+          providerService.setProvider(provider);
+        } else {
+          console.warn('[SettingsContext] Initial provider not found:', parsed.selectedProviderId);
         }
         if (assistant) {
           setCurrentAssistant(assistant);
@@ -102,19 +121,32 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
     try {
+      // First update the state to prevent race conditions
       const updated = { ...settings, ...newSettings };
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
       setSettings(updated);
       
+      // Then save to AsyncStorage (non-blocking)
+      AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated)).catch(error => {
+        console.error('Error saving to AsyncStorage:', error);
+      });
+      
       // Update current provider and assistant if changed
-      if (newSettings.selectedProviderId) {
+      if (newSettings.selectedProviderId !== undefined) {
+        console.log('[SettingsContext] Updating selectedProviderId to:', newSettings.selectedProviderId);
+        console.log('[SettingsContext] Available providers:', providers.map(p => ({ id: p.id, name: p.name })));
+        
         const provider = providers.find(p => p.id === newSettings.selectedProviderId);
         if (provider) {
+          console.log('[SettingsContext] Found provider:', provider.name);
           setCurrentProvider(provider);
+          // Also update provider service immediately
+          providerService.setProvider(provider);
+        } else {
+          console.error('[SettingsContext] Provider not found:', newSettings.selectedProviderId);
         }
       }
       
-      if (newSettings.selectedAssistantId) {
+      if (newSettings.selectedAssistantId !== undefined) {
         const assistant = assistants.find(a => a.id === newSettings.selectedAssistantId);
         if (assistant) {
           setCurrentAssistant(assistant);
@@ -127,11 +159,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const checkConnection = async () => {
     if (!currentProvider) {
+      console.log('[SettingsContext] No currentProvider, setting isConnected to false');
       setIsConnected(false);
       return;
     }
     
+    console.log('[SettingsContext] Checking connection for:', currentProvider.name);
     const connected = await providerService.checkConnection(currentProvider.id);
+    console.log('[SettingsContext] Connection result for', currentProvider.name, ':', connected);
     setIsConnected(connected);
   };
 

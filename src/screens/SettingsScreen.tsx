@@ -40,6 +40,7 @@ const SettingsScreen: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState(settings.selectedModel);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingProvider, setIsChangingProvider] = useState(false);
   
   // Provider editing state
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
@@ -66,23 +67,67 @@ const SettingsScreen: React.FC = () => {
     setSelectedModel(settings.selectedModel);
   }, [settings.selectedModel]);
 
-  const loadModels = async () => {
-    if (!currentProvider) return;
+  // Limpiar modelos cuando cambie el proveedor seleccionado
+  useEffect(() => {
+    console.log(`Provider ID changed to: ${settings.selectedProviderId}`);
+    console.log(`Current provider:`, currentProvider?.name || 'none');
     
+    // Si el proveedor cambió, limpiar modelos inmediatamente
+    if (currentProvider && settings.selectedProviderId !== currentProvider.id) {
+      console.log('Provider mismatch detected, clearing models');
+      setModels([]);
+      setSelectedModel('');
+    }
+  }, [settings.selectedProviderId]);
+
+  const loadModels = async () => {
+    if (!currentProvider) {
+      console.log('No current provider, skipping model loading');
+      return;
+    }
+    
+    // Check if we're already loading models for this provider
+    if (currentProvider.id !== settings.selectedProviderId) {
+      console.log(`Provider mismatch during loadModels, skipping. Current: ${currentProvider.id}, Settings: ${settings.selectedProviderId}`);
+      return;
+    }
+    
+    console.log(`Loading models for provider: ${currentProvider.name} (${currentProvider.id})`);
     setIsLoading(true);
+    
     try {
       const availableModels = await providerService.getModels(currentProvider.id);
+      
+      // Double-check provider hasn't changed during async operation
+      if (currentProvider.id !== settings.selectedProviderId) {
+        console.log('Provider changed during model loading, aborting');
+        return;
+      }
+      
+      console.log(`Loaded ${availableModels.length} models for ${currentProvider.name}`);
       setModels(availableModels);
       
-      // Auto-seleccionar el primer modelo si no hay uno válido seleccionado
-      if (availableModels.length > 0 && !availableModels.find(m => m.name === selectedModel)) {
-        const firstModel = availableModels[0].name;
-        setSelectedModel(firstModel);
-        // Guardar automáticamente el modelo seleccionado
-        await updateSettings({ selectedModel: firstModel });
+      if (availableModels.length > 0) {
+        // Auto-seleccionar el primer modelo si no hay uno válido seleccionado
+        if (!availableModels.find(m => m.name === selectedModel)) {
+          const firstModel = availableModels[0].name;
+          console.log(`Auto-selecting first model: ${firstModel}`);
+          setSelectedModel(firstModel);
+          // Only update settings with model, not triggering provider changes
+          await updateSettings({ selectedModel: firstModel });
+        } else {
+          console.log(`Current model "${selectedModel}" is valid for this provider`);
+        }
+      } else {
+        console.log(`No models available for ${currentProvider.name}, clearing selection`);
+        setSelectedModel('');
+        // Only update model, not provider
+        await updateSettings({ selectedModel: '' });
       }
     } catch (error) {
-      console.error('Error loading models:', error);
+      console.error(`Error loading models for ${currentProvider.name}:`, error);
+      setModels([]);
+      setSelectedModel('');
     } finally {
       setIsLoading(false);
     }
@@ -104,13 +149,35 @@ const SettingsScreen: React.FC = () => {
 
   const handleProviderChange = async (providerId: string) => {
     try {
-      await updateSettings({ selectedProviderId: providerId });
+      console.log(`Changing provider to: ${providerId}`);
+      
+      // Prevent multiple rapid clicks
+      if (settings.selectedProviderId === providerId || isChangingProvider) {
+        console.log('Provider already selected or change in progress, ignoring');
+        return;
+      }
+      
+      setIsChangingProvider(true);
+      
+      // Clear models immediately
       setModels([]);
       setSelectedModel('');
-      // Guardar automáticamente el modelo vacío
-      await updateSettings({ selectedModel: '' });
+      
+      // Update both provider and model in a single call to prevent race conditions
+      await updateSettings({ 
+        selectedProviderId: providerId,
+        selectedModel: ''
+      });
+      
+      console.log(`Provider changed successfully to: ${providerId}`);
+      
+      // Small delay to ensure state propagation
+      setTimeout(() => {
+        setIsChangingProvider(false);
+      }, 500);
     } catch (error) {
       console.error('Error changing provider:', error);
+      setIsChangingProvider(false);
     }
   };
 
@@ -225,6 +292,7 @@ const SettingsScreen: React.FC = () => {
                 settings.selectedProviderId === provider.id && styles.providerItemSelected,
               ]}
               onPress={() => handleProviderChange(provider.id)}
+              disabled={isChangingProvider}
             >
               <View style={styles.providerMain}>
                 <Text
