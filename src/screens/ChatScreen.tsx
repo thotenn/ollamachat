@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
@@ -91,31 +91,46 @@ const ChatScreen: React.FC = () => {
   }, [isConnected, settings.selectedModel, context]);
 
   const handleClearConversation = useCallback(() => {
-    Alert.alert(
-      'Nueva Conversación',
-      '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
-      [
+    console.log('Clear conversation button pressed, Platform:', Platform.OS);
+    
+    const clearConversation = () => {
+      console.log('Clearing conversation...');
+      setContext(undefined);
+      setMessages([
         {
-          text: 'Cancelar',
-          style: 'cancel',
+          id: '1',
+          text: `¡Hola! Soy tu asistente con ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
+          timestamp: new Date(),
+          isUser: false,
         },
-        {
-          text: 'Confirmar',
-          style: 'destructive',
-          onPress: () => {
-            setContext(undefined);
-            setMessages([
-              {
-                id: '1',
-                text: `¡Hola! Soy tu asistente con ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
-                timestamp: new Date(),
-                isUser: false,
-              },
-            ]);
+      ]);
+    };
+
+    if (Platform.OS === 'web') {
+      // En web, usar confirm nativo
+      console.log('Using web confirm dialog');
+      if (window.confirm('¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.')) {
+        clearConversation();
+      }
+    } else {
+      // En móvil, usar Alert de React Native
+      console.log('Using mobile Alert dialog');
+      Alert.alert(
+        'Nueva Conversación',
+        '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
           },
-        },
-      ]
-    );
+          {
+            text: 'Confirmar',
+            style: 'destructive',
+            onPress: clearConversation,
+          },
+        ]
+      );
+    }
   }, [settings.selectedModel]);
 
   return (
@@ -126,6 +141,10 @@ const ChatScreen: React.FC = () => {
           <TouchableOpacity 
             style={styles.newChatButton}
             onPress={handleClearConversation}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityLabel="Nueva conversación"
+            accessibilityRole="button"
           >
             <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
           </TouchableOpacity>
@@ -183,7 +202,13 @@ const styles = StyleSheet.create({
   },
   newChatButton: {
     marginRight: 12,
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      userSelect: 'none',
+    }),
   },
   statusContainer: {
     flexDirection: 'row',

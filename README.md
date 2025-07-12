@@ -39,7 +39,7 @@ Asegúrate de que tu servidor Ollama esté configurado para aceptar conexiones d
    OLLAMA_HOST=0.0.0.0:11434 ollama serve
    ```
 
-2. Si estás en un dispositivo físico, usa la IP de tu computadora (ej: `http://192.168.1.100:11434`)
+2. Si estás en un dispositivo físico, usa la IP de tu computadora (ej: `http://192.168.100.66:11434`)
 
 ## Ejecutar la aplicación
 
