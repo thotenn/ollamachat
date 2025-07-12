@@ -98,16 +98,31 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   // Helper function to build message history for context-aware providers
-  const buildMessageHistory = (messages: ChatMessage[]): Array<{ role: 'user' | 'assistant'; content: string }> => {
+  const buildMessageHistory = (messages: ChatMessage[], currentPrompt: string): Array<{ role: 'user' | 'assistant'; content: string }> => {
     // Skip the welcome message and current temp message
     const conversationMessages = messages.filter(msg => 
       !msg.text.includes('¡Hola! Soy') && !msg.id.startsWith('temp-') && msg.text.trim() !== ''
     );
 
+    // Detect if this is a topic change or continuation
+    const isTopicChange = detectTopicChange(currentPrompt, conversationMessages);
+    
+    let historyLimit = 10; // Default
+    
+    if (isTopicChange) {
+      // For topic changes, limit context to avoid confusion
+      historyLimit = 4; // Only last 2 exchanges (4 messages)
+      console.log('Topic change detected, limiting context to recent messages');
+    } else {
+      // For continuing conversation, use more context
+      historyLimit = 10;
+      console.log('Continuing topic, using full context');
+    }
+
     // Convert to the format expected by APIs like Anthropic
     // Reverse to get chronological order (oldest first)
     const history = conversationMessages
-      .slice(0, 10) // Limit to last 10 messages to avoid token limits
+      .slice(0, historyLimit)
       .reverse()
       .map(msg => ({
         role: msg.isUser ? 'user' : 'assistant' as 'user' | 'assistant',
@@ -116,6 +131,56 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
     console.log(`Built message history with ${history.length} messages for context`);
     return history;
+  };
+
+  // Detect if the current prompt is changing topic
+  const detectTopicChange = (currentPrompt: string, messages: ChatMessage[]): boolean => {
+    if (messages.length === 0) return false;
+    
+    // Get last few user messages
+    const recentUserMessages = messages
+      .filter(msg => msg.isUser && msg.text.trim() !== '')
+      .slice(0, 3)
+      .map(msg => msg.text.toLowerCase());
+    
+    const currentLower = currentPrompt.toLowerCase();
+    
+    // Keywords that indicate topic change
+    const topicChangeIndicators = [
+      'pero', 'sin embargo', 'ahora', 'cambiando de tema', 'otra pregunta',
+      'ya se que', 'aparte', 'por cierto', 'a propósito', 'hablando de otra cosa',
+      'que modelo', 'eres claude', 'que version', 'quien eres', 'dime sobre ti'
+    ];
+    
+    // Check if current prompt contains topic change indicators
+    const hasTopicChangeIndicator = topicChangeIndicators.some(indicator => 
+      currentLower.includes(indicator)
+    );
+    
+    if (hasTopicChangeIndicator) {
+      return true;
+    }
+    
+    // Simple keyword overlap check
+    if (recentUserMessages.length > 0) {
+      const recentKeywords = recentUserMessages.join(' ').split(' ')
+        .filter(word => word.length > 3)
+        .slice(0, 10);
+      
+      const currentKeywords = currentLower.split(' ')
+        .filter(word => word.length > 3);
+      
+      const overlap = currentKeywords.filter(word => 
+        recentKeywords.some(recent => recent.includes(word) || word.includes(recent))
+      ).length;
+      
+      // If very low keyword overlap, might be a topic change
+      if (currentKeywords.length > 2 && overlap === 0) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   const handleSendMessage = useCallback(async (text: string) => {
@@ -183,7 +248,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       let fullResponse = '';
       
       // Build message history for context-aware providers (like Anthropic)
-      const messageHistory = buildMessageHistory(messages);
+      const messageHistory = buildMessageHistory(messages, text);
       
       console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
       console.log('Message history length:', messageHistory.length);
