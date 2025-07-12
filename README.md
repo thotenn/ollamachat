@@ -420,3 +420,11 @@ npm install
 ## License
 
 This project is licensed under the MIT License.
+
+# For debugging purposes, you can use the following commands:
+# To build and install the Android app locally:
+```bash
+cd android
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleRelease
+adb install app/build/outputs/apk/release/app-release.apk
+```
