@@ -204,6 +204,22 @@ class DatabaseService {
     return result?.count || 0;
   }
 
+  async getUserMessages(conversationId: string, limit: number = 3): Promise<string[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getAllAsync(
+        'SELECT text FROM messages WHERE conversation_id = ? AND is_user = 1 ORDER BY message_order ASC LIMIT ?',
+        [conversationId, limit]
+      ) as any[];
+
+      return result.map(row => row.text);
+    } catch (error) {
+      console.error('Error in getUserMessages:', error);
+      return [];
+    }
+  }
+
   async clearAllData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 

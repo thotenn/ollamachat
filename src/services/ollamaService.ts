@@ -91,16 +91,16 @@ class OllamaService {
     }
   }
 
-  async generateChatTitle(firstMessage: string, model: string): Promise<string> {
+  async generateChatTitle(conversationContext: string, model: string): Promise<string> {
     try {
-      const prompt = `Based on this user question: "${firstMessage}"
+      const prompt = `Based on this conversation context: "${conversationContext}"
 
-Generate a short, descriptive title for this conversation (maximum 6 words). The title should be clear and concise, capturing the main topic or intent. Do not use quotes or special characters. Only respond with the title, nothing else.
+Generate a short, descriptive title for this conversation (maximum 6 words). The title should be clear and concise, capturing the main topic or intent of the entire conversation. Do not use quotes or special characters. Only respond with the title, nothing else.
 
 Examples:
-- User: "How do I learn Python?" → Title: "Learning Python Programming"
-- User: "What's the weather like?" → Title: "Weather Information Request"
-- User: "Help me with math homework" → Title: "Math Homework Help"
+- Context: "How do I learn Python? What are the best resources? Should I start with basics?" → Title: "Python Learning Resources Guide"
+- Context: "What's the weather like? Will it rain tomorrow? Should I bring umbrella?" → Title: "Weather Forecast and Planning"
+- Context: "Help me with math homework. How do I solve equations? What about quadratic formulas?" → Title: "Math Homework Help Session"
 
 Title:`;
 
@@ -119,15 +119,15 @@ Title:`;
       
       // Fallback if title is empty or too short
       if (title.length < 3) {
-        const firstWords = firstMessage.split(' ').slice(0, 4).join(' ');
+        const firstWords = conversationContext.split(' ').slice(0, 4).join(' ');
         title = firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;
       }
 
       return title;
     } catch (error) {
       console.error('Error generating chat title:', error);
-      // Fallback: use first few words of the message
-      const firstWords = firstMessage.split(' ').slice(0, 4).join(' ');
+      // Fallback: use first few words of the context
+      const firstWords = conversationContext.split(' ').slice(0, 4).join(' ');
       return firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;
     }
   }

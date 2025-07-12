@@ -56,11 +56,19 @@ This is a React Native Expo app that creates a chat interface for communicating 
 
 ### Key Implementation Details
 
-- Conversation context is preserved using Ollama's context tokens array
-- New conversation button clears context and resets chat history
-- Connection status is shown with colored dots in the header
-- Settings are validated by testing actual connection to Ollama server
-- Platform detection is used throughout for web vs mobile behavior differences
+- **SQLite Database**: All conversations and messages are persisted locally using expo-sqlite
+- **Smart Title Generation**: AI generates conversation titles based on first 3 user questions for better context
+- **Context Preservation**: Ollama context tokens are preserved in database and restored between sessions
+- **Message Ordering**: Uses ORDER BY message_order DESC to maintain chat consistency (newest first)
+- **Error Recovery**: Database operations include comprehensive error handling and auto-recovery
+- **Connection Status**: Real-time monitoring with colored dots in header
+- **Platform Detection**: Cross-platform behavior differences handled throughout codebase
+
+### Database Schema
+
+- **conversations** table: id, title, created_at, updated_at, model, context (JSON)
+- **messages** table: id, conversation_id, text, is_user, timestamp, message_order
+- **Indexes**: Optimized queries with conversation_id + message_order composite index
 
 ## Ollama Integration
 

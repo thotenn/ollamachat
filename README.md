@@ -165,10 +165,23 @@ ollamachat/
 
 ## Key Features
 
+### Conversation Persistence
+- All conversations are automatically saved to SQLite database
+- Chat history with organized conversation list
+- Persistent conversation context across sessions
+- Automatic conversation backup and restore
+
+### Smart Title Generation
+- AI-powered conversation titles based on first 3 questions
+- Titles update and refine as conversation develops
+- Contextual understanding for better categorization
+- Fallback to user message preview if AI generation fails
+
 ### Conversation Context
 - Maintains conversation history using Ollama's context tokens
 - New conversation button to reset context
 - Visual indicator when context is active
+- Context preservation between app sessions
 
 ### Cross-Platform Compatibility
 - Web: Uses native browser dialogs and optimized rendering

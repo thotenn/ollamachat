@@ -195,12 +195,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
               context: newContext ? JSON.stringify(newContext) : undefined,
             });
 
-            // Generate title for first message
-            if (isFirstMessage) {
+            // Generate/update title for first 3 messages
+            const userMessageCount = Math.floor((currentOrder + 1) / 2); // Each user message followed by AI response
+            if (userMessageCount <= 3) {
               try {
-                const title = await ollamaService.generateChatTitle(text, settings.selectedModel);
+                // Get the user messages so far (up to 3)
+                const userMessages = await databaseService.getUserMessages(conversationId, 3);
+                const conversationContext = userMessages.join(' ');
+                
+                const title = await ollamaService.generateChatTitle(conversationContext, settings.selectedModel);
                 await databaseService.updateConversation(conversationId, { title });
-                console.log('Generated title:', title);
+                console.log(`Generated title (message ${userMessageCount}/3):`, title);
               } catch (error) {
                 console.error('Error generating title:', error);
               }
