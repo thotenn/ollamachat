@@ -81,39 +81,213 @@ npm run android
 
 ## Building for Production
 
-### Expo Application Services (EAS) Build
+### Prerequisites for Building
 
-1. Install EAS CLI:
+1. **Create Expo Account**: Sign up at [expo.dev](https://expo.dev) (free)
+2. **Install EAS CLI**:
    ```bash
    npm install -g eas-cli
    ```
 
-2. Configure EAS (first time only):
+### EAS Build Setup (First Time Only)
+
+1. **Login to EAS**:
    ```bash
    eas login
+   ```
+   Enter your Expo account credentials
+
+2. **Configure Project**:
+   ```bash
    eas build:configure
    ```
+   This creates the necessary build configuration
 
-3. Build for platforms:
-   ```bash
-   # Build for both platforms
-   eas build --platform all
-   
-   # Build for specific platform
-   eas build --platform android
-   eas build --platform ios
-   ```
+### Building APK for Android
+
+#### Option 1: Preview Build (Recommended for Testing)
+```bash
+# Build APK for internal distribution
+eas build --platform android --profile preview
+```
+
+#### Option 2: Production Build
+```bash
+# Build APK for production
+eas build --platform android --profile production
+```
+
+#### Build Process:
+- Build time: **10-15 minutes**
+- Monitor progress in terminal or at [expo.dev builds dashboard](https://expo.dev)
+- Download link provided upon completion
+- APK ready for installation on any Android device
+
+### Building for iOS
+
+#### Development Build
+```bash
+eas build --platform ios --profile development
+```
+
+#### Production Build (App Store)
+```bash
+eas build --platform ios --profile production
+```
+
+**Note**: iOS builds require:
+- Apple Developer Account ($99/year)
+- Signing certificates and provisioning profiles
+- macOS for local testing
+
+### Building for Web
+
+#### Development
+```bash
+npm run web
+```
+
+#### Production Build
+```bash
+npx expo export:web
+```
+
+The web build will be in the `dist/` folder, ready for deployment to any static hosting service.
+
+### Build All Platforms
+```bash
+# Build for all platforms simultaneously
+eas build --platform all
+```
 
 ### Local Native Build (Advanced)
+
+For developers who want to build locally with Android Studio/Xcode:
 
 ```bash
 # Generate native code
 npx expo prebuild
 
-# Build with native tools
+# Build and run on connected device
 npx expo run:android
 npx expo run:ios
 ```
+
+**Requirements**:
+- Android Studio with Android SDK (for Android)
+- Xcode 12+ (for iOS, macOS only)
+
+### Build Management
+
+#### View Build Status
+```bash
+# List all builds
+eas build:list
+
+# View specific build details
+eas build:view [BUILD_ID]
+
+# Cancel a build
+eas build:cancel [BUILD_ID]
+```
+
+#### Download Builds
+- **Automatic**: Download link sent via email and shown in terminal
+- **Manual**: Visit [expo.dev builds](https://expo.dev) dashboard
+- **CLI**: Use the provided download URL
+
+### Installing APK on Android
+
+1. **Download APK** from the EAS build link
+2. **Enable Unknown Sources**:
+   - Go to Settings > Security > Unknown Sources
+   - Or Settings > Apps > Special Access > Install Unknown Apps
+3. **Install APK**:
+   - Open the downloaded APK file
+   - Follow installation prompts
+4. **Launch App**: Find "Ollama Chat" in your app drawer
+
+### Build Configuration
+
+The project includes optimized build configurations in `eas.json`:
+
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+```
+
+### Troubleshooting Builds
+
+#### Common Issues:
+
+**Build fails with dependency errors**:
+```bash
+# Clear node modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Android build fails**:
+- Ensure all required permissions are in `app.json`
+- Check package name is unique
+- Verify internet connectivity during build
+
+**iOS build fails**:
+- Ensure Apple Developer account is active
+- Check provisioning profiles are valid
+- Verify bundle identifier is unique
+
+**Web build optimization**:
+- Images are automatically optimized
+- Bundle size is minimized
+- PWA features enabled by default
+
+### Production Deployment
+
+#### Android
+- **Google Play Store**: Use AAB format (`"buildType": "aab"` in eas.json)
+- **Direct Distribution**: Use APK format (current configuration)
+- **Enterprise**: Use internal distribution
+
+#### iOS
+- **App Store**: Submit through App Store Connect
+- **TestFlight**: Use development builds for beta testing
+- **Enterprise**: Use enterprise certificates
+
+#### Web
+- **Static Hosting**: Deploy `dist/` folder to Vercel, Netlify, or Firebase
+- **Custom Server**: Serve static files with proper MIME types
+- **CDN**: Use CloudFront or similar for global distribution
+
+### Build Optimization Tips
+
+1. **Reduce Bundle Size**:
+   - Remove unused dependencies
+   - Optimize images before building
+   - Use vector icons when possible
+
+2. **Performance**:
+   - Enable Hermes for Android (configured automatically)
+   - Use release builds for testing performance
+   - Profile app with production builds
+
+3. **Security**:
+   - Never commit signing keys to git
+   - Use environment variables for sensitive data
+   - Enable proguard for Android release builds
 
 ## Configuration
 
