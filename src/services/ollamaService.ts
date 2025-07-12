@@ -17,6 +17,11 @@ class OllamaService {
       const response = await axios.post(`${this.baseUrl}/api/generate`, {
         ...request,
         stream: false,
+      }, {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       return response.data;
     } catch (error) {
@@ -74,7 +79,12 @@ class OllamaService {
 
   async getModels(): Promise<OllamaModel[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/api/tags`);
+      const response = await axios.get(`${this.baseUrl}/api/tags`, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       return response.data.models || [];
     } catch (error) {
       console.error('Error fetching models:', error);
@@ -84,9 +94,15 @@ class OllamaService {
 
   async checkConnection(): Promise<boolean> {
     try {
-      await axios.get(`${this.baseUrl}/api/tags`);
+      await axios.get(`${this.baseUrl}/api/tags`, {
+        timeout: 10000,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       return true;
     } catch (error) {
+      console.error('Connection error:', error);
       return false;
     }
   }
