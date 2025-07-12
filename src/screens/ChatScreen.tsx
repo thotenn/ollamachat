@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
@@ -51,6 +51,8 @@ const ChatScreen: React.FC = () => {
     try {
       let fullResponse = '';
       
+      console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
+      
       await ollamaService.streamResponse(
         {
           model: settings.selectedModel,
@@ -67,8 +69,13 @@ const ChatScreen: React.FC = () => {
             );
           });
         },
-        () => {
+        (newContext?: number[]) => {
           setIsTyping(false);
+          // Update context for next conversation
+          if (newContext) {
+            console.log('Updating context with', newContext.length, 'tokens');
+            setContext(newContext);
+          }
         }
       );
 
@@ -83,13 +90,54 @@ const ChatScreen: React.FC = () => {
     }
   }, [isConnected, settings.selectedModel, context]);
 
+  const handleClearConversation = useCallback(() => {
+    Alert.alert(
+      'Nueva Conversación',
+      '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirmar',
+          style: 'destructive',
+          onPress: () => {
+            setContext(undefined);
+            setMessages([
+              {
+                id: '1',
+                text: `¡Hola! Soy tu asistente con ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
+                timestamp: new Date(),
+                isUser: false,
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  }, [settings.selectedModel]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Ollama Chat</Text>
-        <View style={styles.statusContainer}>
-          <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
-          <Text style={styles.statusText}>{settings.selectedModel}</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.newChatButton}
+            onPress={handleClearConversation}
+          >
+            <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
+            <Text style={styles.statusText}>{settings.selectedModel}</Text>
+            {context && (
+              <View style={styles.contextIndicator}>
+                <Ionicons name="link" size={12} color="#007AFF" />
+              </View>
+            )}
+          </View>
         </View>
       </View>
       {!isConnected ? (
@@ -129,6 +177,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  newChatButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,6 +198,10 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     color: '#666',
+  },
+  contextIndicator: {
+    marginLeft: 8,
+    padding: 2,
   },
   emptyContainer: {
     flex: 1,

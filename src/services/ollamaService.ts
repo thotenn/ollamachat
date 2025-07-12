@@ -28,7 +28,7 @@ class OllamaService {
   async streamResponse(
     request: OllamaGenerateRequest,
     onChunk: (chunk: string) => void,
-    onComplete: () => void
+    onComplete: (context?: number[]) => void
   ): Promise<void> {
     try {
       // React Native doesn't support streaming in the same way, so we'll use a non-streaming approach
@@ -58,7 +58,8 @@ class OllamaService {
           currentIndex += 3;
           scheduleNext(processChunk);
         } else {
-          onComplete();
+          // Pass the context from the response to maintain conversation continuity
+          onComplete(response.context);
         }
       };
       
