@@ -1,23 +1,26 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
+import { DatabaseAdapter } from './databaseAdapter';
 import { ChatConversation, ChatMessageDB, ChatMessage } from '../types';
+import webDatabaseService from './webDatabaseService';
 
-class DatabaseService {
+class NativeDatabaseService implements DatabaseAdapter {
   private db: SQLite.SQLiteDatabase | null = null;
 
   async initDatabase(): Promise<void> {
     try {
       if (this.db) {
-        console.log('Database already initialized');
+        console.log('Native database already initialized');
         return;
       }
       
-      console.log('Initializing database...');
+      console.log('Initializing native database...');
       this.db = await SQLite.openDatabaseAsync('ollamachat.db');
-      console.log('Database opened successfully');
+      console.log('Native database opened successfully');
       await this.createTables();
-      console.log('Tables created successfully');
+      console.log('Native tables created successfully');
     } catch (error) {
-      console.error('Error initializing database:', error);
+      console.error('Error initializing native database:', error);
       this.db = null;
       throw error;
     }
@@ -110,11 +113,11 @@ class DatabaseService {
 
   async getConversations(): Promise<ChatConversation[]> {
     if (!this.db) {
-      console.log('Database not initialized, attempting to reinitialize...');
+      console.log('Native database not initialized, attempting to reinitialize...');
       try {
         await this.initDatabase();
       } catch (error) {
-        console.error('Failed to reinitialize database:', error);
+        console.error('Failed to reinitialize native database:', error);
         return [];
       }
     }
@@ -133,7 +136,7 @@ class DatabaseService {
         context: row.context,
       }));
     } catch (error) {
-      console.error('Error in getConversations:', error);
+      console.error('Error in native getConversations:', error);
       // Try to reinitialize on error
       this.db = null;
       return [];
@@ -228,4 +231,26 @@ class DatabaseService {
   }
 }
 
-export default new DatabaseService();
+// Platform-specific database service factory
+class DatabaseServiceFactory {
+  private static instance: DatabaseAdapter | null = null;
+
+  static getInstance(): DatabaseAdapter {
+    if (!this.instance) {
+      if (Platform.OS === 'web') {
+        console.log('Using WebDatabaseService for web platform');
+        this.instance = webDatabaseService;
+      } else {
+        console.log('Using NativeDatabaseService for native platform');
+        this.instance = new NativeDatabaseService();
+      }
+    }
+    return this.instance;
+  }
+
+  static resetInstance(): void {
+    this.instance = null;
+  }
+}
+
+export default DatabaseServiceFactory.getInstance();
