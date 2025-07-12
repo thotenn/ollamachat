@@ -251,12 +251,79 @@ class AnthropicProviderService extends BaseProviderService {
   }
 
   async getModels(): Promise<AIModel[]> {
-    // Anthropic models are static
+    try {
+      if (!this.provider.apiKey) {
+        console.log('No API key provided, returning extended default models');
+        return this.getExtendedDefaultModels();
+      }
+
+      // Test API key validity by making a small request
+      await axios.post(this.getApiUrl('/messages'), {
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'test' }],
+      }, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.provider.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+      });
+
+      // If API key is valid, return extended model list
+      console.log('API key validated, returning extended model list');
+      return this.getExtendedDefaultModels();
+    } catch (error: any) {
+      console.error('Error validating Anthropic API key:', error?.response?.status || error.message);
+      
+      // If it's an auth error, return basic models with a note
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.log('Invalid API key, returning basic models only');
+        return this.getBasicDefaultModels();
+      }
+
+      // For other errors (like rate limits), still return extended models
+      console.log('API temporarily unavailable, returning extended models');
+      return this.getExtendedDefaultModels();
+    }
+  }
+
+private getBasicDefaultModels(): AIModel[] {
     return [
-      { name: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku' },
-      { name: 'claude-3-sonnet-20240229', displayName: 'Claude 3 Sonnet' },
-      { name: 'claude-3-opus-20240229', displayName: 'Claude 3 Opus' },
+      // Latest and most capable models for basic usage
+      { name: 'claude-sonnet-4-20250514', displayName: 'Claude 4 Sonnet (Latest)' },
+      { name: 'claude-3-7-sonnet-20250219', displayName: 'Claude 3.7 Sonnet' },
       { name: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet' },
+      { name: 'claude-3-5-haiku-20241022', displayName: 'Claude 3.5 Haiku' },
+      { name: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku' },
+    ];
+  }
+
+  private getExtendedDefaultModels(): AIModel[] {
+    return [
+      // Claude 4 Models (Most Advanced - May 2025)
+      { name: 'claude-opus-4-20250514', displayName: 'Claude 4 Opus (Most Powerful)' },
+      { name: 'claude-sonnet-4-20250514', displayName: 'Claude 4 Sonnet (Balanced)' },
+      
+      // Claude 3.7 Models (Advanced Reasoning - Feb 2025)
+      { name: 'claude-3-7-sonnet-20250219', displayName: 'Claude 3.7 Sonnet (Extended Thinking)' },
+      
+      // Claude 3.5 Models (Oct 2024)
+      { name: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet (Latest)' },
+      { name: 'claude-3-5-haiku-20241022', displayName: 'Claude 3.5 Haiku (Fast & Smart)' },
+      { name: 'claude-3-5-sonnet-20240620', displayName: 'Claude 3.5 Sonnet (June)' },
+      
+      // Claude 3 Models (Mar 2024)
+      { name: 'claude-3-opus-20240229', displayName: 'Claude 3 Opus (Most Capable)' },
+      { name: 'claude-3-sonnet-20240229', displayName: 'Claude 3 Sonnet (Balanced)' },
+      { name: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku (Fast)' },
+      
+      // Legacy Models (For compatibility)
+      { name: 'claude-instant-1.2', displayName: 'Claude Instant 1.2 (Legacy)' },
+      { name: 'claude-2.1', displayName: 'Claude 2.1 (Legacy)' },
+      { name: 'claude-2.0', displayName: 'Claude 2.0 (Legacy)' },
     ];
   }
 
