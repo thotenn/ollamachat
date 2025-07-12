@@ -4,15 +4,75 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
 import ollamaService from '../services/ollamaService';
+import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
+import { ChatMessageDB } from '../types';
 
-const ChatScreen: React.FC = () => {
+interface ChatScreenProps {
+  conversationId?: string;
+  onConversationChange?: (conversationId: string) => void;
+}
+
+const ChatScreen: React.FC<ChatScreenProps> = ({ 
+  conversationId, 
+  onConversationChange 
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const { settings, isConnected } = useSettings();
   const [context, setContext] = useState<number[] | undefined>();
+  const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(conversationId);
+  const [messageCount, setMessageCount] = useState(0);
 
   useEffect(() => {
+    const initDatabase = async () => {
+      try {
+        await databaseService.initDatabase();
+      } catch (error) {
+        console.error('Error initializing database:', error);
+      }
+    };
+    initDatabase();
+  }, []);
+
+  useEffect(() => {
+    if (conversationId && conversationId !== currentConversationId) {
+      loadConversation(conversationId);
+    } else if (!conversationId) {
+      startNewConversation();
+    }
+  }, [conversationId, settings.selectedModel]);
+
+  const loadConversation = async (convId: string) => {
+    try {
+      const conversation = await databaseService.getConversationById(convId);
+      if (conversation) {
+        const conversationMessages = await databaseService.getConversationMessages(convId);
+        console.log('Loaded messages:', conversationMessages.length);
+        setMessages(conversationMessages);
+        setCurrentConversationId(convId);
+        setMessageCount(conversationMessages.length);
+        
+        // Load context if available
+        if (conversation.context) {
+          try {
+            const parsedContext = JSON.parse(conversation.context);
+            setContext(parsedContext);
+          } catch (e) {
+            console.error('Error parsing context:', e);
+            setContext(undefined);
+          }
+        } else {
+          setContext(undefined);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      Alert.alert('Error', 'Failed to load conversation');
+    }
+  };
+
+  const startNewConversation = () => {
     setMessages([
       {
         id: '1',
@@ -21,7 +81,10 @@ const ChatScreen: React.FC = () => {
         isUser: false,
       },
     ]);
-  }, [settings.selectedModel]);
+    setCurrentConversationId(undefined);
+    setContext(undefined);
+    setMessageCount(0);
+  };
 
   const handleSendMessage = useCallback(async (text: string) => {
     if (!isConnected) {
@@ -49,6 +112,40 @@ const ChatScreen: React.FC = () => {
     setMessages(previousMessages => [tempMessage, ...previousMessages]);
 
     try {
+      // Create or get conversation ID
+      let conversationId = currentConversationId;
+      const isFirstMessage = messageCount === 0;
+      
+      if (!conversationId && isFirstMessage) {
+        // Create new conversation
+        const now = new Date().toISOString();
+        conversationId = await databaseService.createConversation({
+          title: 'New Conversation', // Temporary title
+          createdAt: now,
+          updatedAt: now,
+          model: settings.selectedModel,
+        });
+        setCurrentConversationId(conversationId);
+        onConversationChange?.(conversationId);
+      }
+
+      let currentOrder = messageCount;
+
+      // Save user message
+      if (conversationId) {
+        currentOrder += 1;
+        const userMessageDB: ChatMessageDB = {
+          id: userMessage.id,
+          conversationId,
+          text: userMessage.text,
+          isUser: true,
+          timestamp: userMessage.timestamp.toISOString(),
+          order: currentOrder,
+        };
+        await databaseService.saveMessage(userMessageDB);
+        setMessageCount(currentOrder);
+      }
+
       let fullResponse = '';
       
       console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
@@ -69,12 +166,45 @@ const ChatScreen: React.FC = () => {
             );
           });
         },
-        (newContext?: number[]) => {
+        async (newContext?: number[]) => {
           setIsTyping(false);
+          
           // Update context for next conversation
           if (newContext) {
             console.log('Updating context with', newContext.length, 'tokens');
             setContext(newContext);
+          }
+
+          // Save AI response
+          if (conversationId && fullResponse) {
+            currentOrder += 1;
+            const aiMessageDB: ChatMessageDB = {
+              id: tempMessage.id,
+              conversationId,
+              text: fullResponse,
+              isUser: false,
+              timestamp: tempMessage.timestamp.toISOString(),
+              order: currentOrder,
+            };
+            await databaseService.saveMessage(aiMessageDB);
+            setMessageCount(currentOrder);
+
+            // Update conversation with context and timestamp
+            await databaseService.updateConversation(conversationId, {
+              updatedAt: new Date().toISOString(),
+              context: newContext ? JSON.stringify(newContext) : undefined,
+            });
+
+            // Generate title for first message
+            if (isFirstMessage) {
+              try {
+                const title = await ollamaService.generateChatTitle(text, settings.selectedModel);
+                await databaseService.updateConversation(conversationId, { title });
+                console.log('Generated title:', title);
+              } catch (error) {
+                console.error('Error generating title:', error);
+              }
+            }
           }
         }
       );
@@ -88,22 +218,15 @@ const ChatScreen: React.FC = () => {
         previousMessages.filter(msg => msg.id !== tempMessage.id)
       );
     }
-  }, [isConnected, settings.selectedModel, context]);
+  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange]);
 
   const handleClearConversation = useCallback(() => {
     console.log('Clear conversation button pressed, Platform:', Platform.OS);
     
     const clearConversation = () => {
       console.log('Clearing conversation...');
-      setContext(undefined);
-      setMessages([
-        {
-          id: '1',
-          text: `¡Hola! Soy tu asistente con ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
-          timestamp: new Date(),
-          isUser: false,
-        },
-      ]);
+      startNewConversation();
+      onConversationChange?.(undefined);
     };
 
     if (Platform.OS === 'web') {
@@ -131,7 +254,7 @@ const ChatScreen: React.FC = () => {
         ]
       );
     }
-  }, [settings.selectedModel]);
+  }, [onConversationChange]);
 
   return (
     <SafeAreaView style={styles.container}>

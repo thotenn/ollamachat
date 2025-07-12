@@ -90,6 +90,47 @@ class OllamaService {
       return false;
     }
   }
+
+  async generateChatTitle(firstMessage: string, model: string): Promise<string> {
+    try {
+      const prompt = `Based on this user question: "${firstMessage}"
+
+Generate a short, descriptive title for this conversation (maximum 6 words). The title should be clear and concise, capturing the main topic or intent. Do not use quotes or special characters. Only respond with the title, nothing else.
+
+Examples:
+- User: "How do I learn Python?" → Title: "Learning Python Programming"
+- User: "What's the weather like?" → Title: "Weather Information Request"
+- User: "Help me with math homework" → Title: "Math Homework Help"
+
+Title:`;
+
+      const response = await this.generateResponse({
+        model,
+        prompt,
+        stream: false,
+      });
+
+      let title = response.response.trim();
+      
+      // Clean up the title
+      title = title.replace(/^["']|["']$/g, ''); // Remove quotes
+      title = title.replace(/^Title:\s*/i, ''); // Remove "Title:" prefix
+      title = title.substring(0, 50); // Limit length
+      
+      // Fallback if title is empty or too short
+      if (title.length < 3) {
+        const firstWords = firstMessage.split(' ').slice(0, 4).join(' ');
+        title = firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;
+      }
+
+      return title;
+    } catch (error) {
+      console.error('Error generating chat title:', error);
+      // Fallback: use first few words of the message
+      const firstWords = firstMessage.split(' ').slice(0, 4).join(' ');
+      return firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;
+    }
+  }
 }
 
 export default new OllamaService();

@@ -54,3 +54,21 @@ export interface AppSettings {
   ollamaUrl: string;
   selectedModel: string;
 }
+
+export interface ChatConversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  model: string;
+  context?: string; // JSON stringified context array
+}
+
+export interface ChatMessageDB {
+  id: string;
+  conversationId: string;
+  text: string;
+  isUser: boolean;
+  timestamp: string;
+  order: number;
+}
