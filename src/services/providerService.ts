@@ -159,6 +159,15 @@ class OllamaProviderService extends BaseProviderService {
 }
 
 class AnthropicProviderService extends BaseProviderService {
+  private getApiUrl(endpoint: string): string {
+    // If using CORS proxy (localhost), use /proxy prefix
+    if (this.provider.baseUrl.includes('localhost')) {
+      return `${this.provider.baseUrl}/proxy${endpoint}`;
+    }
+    // If using direct API, add /v1 prefix
+    return `${this.provider.baseUrl}/v1${endpoint}`;
+  }
+
   async generateResponse(request: GenerateRequest): Promise<GenerateResponse> {
     try {
       if (!this.provider.apiKey) {
@@ -171,7 +180,7 @@ class AnthropicProviderService extends BaseProviderService {
       }
       messages.push({ role: 'user', content: request.prompt });
 
-      const response = await axios.post(`${this.provider.baseUrl}/v1/messages`, {
+      const response = await axios.post(this.getApiUrl('/messages'), {
         model: request.model,
         max_tokens: 4096,
         messages,
@@ -182,6 +191,7 @@ class AnthropicProviderService extends BaseProviderService {
           'Content-Type': 'application/json',
           'x-api-key': this.provider.apiKey,
           'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
       });
 
@@ -257,7 +267,7 @@ class AnthropicProviderService extends BaseProviderService {
       }
 
       // Test with a simple request
-      await axios.post(`${this.provider.baseUrl}/v1/messages`, {
+      await axios.post(this.getApiUrl('/messages'), {
         model: 'claude-3-haiku-20240307',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hello' }],
@@ -267,6 +277,7 @@ class AnthropicProviderService extends BaseProviderService {
           'Content-Type': 'application/json',
           'x-api-key': this.provider.apiKey,
           'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
         },
       });
       
@@ -279,6 +290,15 @@ class AnthropicProviderService extends BaseProviderService {
 }
 
 class OpenAIProviderService extends BaseProviderService {
+  private getApiUrl(endpoint: string): string {
+    // If using CORS proxy (localhost), use /proxy prefix
+    if (this.provider.baseUrl.includes('localhost')) {
+      return `${this.provider.baseUrl}/proxy${endpoint}`;
+    }
+    // If using direct API, add /v1 prefix
+    return `${this.provider.baseUrl}/v1${endpoint}`;
+  }
+
   async generateResponse(request: GenerateRequest): Promise<GenerateResponse> {
     try {
       if (!this.provider.apiKey) {
@@ -291,7 +311,7 @@ class OpenAIProviderService extends BaseProviderService {
       }
       messages.push({ role: 'user', content: request.prompt });
 
-      const response = await axios.post(`${this.provider.baseUrl}/v1/chat/completions`, {
+      const response = await axios.post(this.getApiUrl('/chat/completions'), {
         model: request.model,
         messages,
         temperature: request.options?.temperature || 0.7,
@@ -365,7 +385,7 @@ class OpenAIProviderService extends BaseProviderService {
         return [];
       }
 
-      const response = await axios.get(`${this.provider.baseUrl}/v1/models`, {
+      const response = await axios.get(this.getApiUrl('/models'), {
         timeout: 10000,
         headers: {
           'Authorization': `Bearer ${this.provider.apiKey}`,
@@ -394,7 +414,7 @@ class OpenAIProviderService extends BaseProviderService {
         return false;
       }
 
-      await axios.get(`${this.provider.baseUrl}/v1/models`, {
+      await axios.get(this.getApiUrl('/models'), {
         timeout: 10000,
         headers: {
           'Authorization': `Bearer ${this.provider.apiKey}`,
@@ -410,6 +430,15 @@ class OpenAIProviderService extends BaseProviderService {
 }
 
 class GeminiProviderService extends BaseProviderService {
+  private getApiUrl(endpoint: string): string {
+    // If using CORS proxy (localhost), don't add /v1beta prefix
+    if (this.provider.baseUrl.includes('localhost')) {
+      return `${this.provider.baseUrl}${endpoint}`;
+    }
+    // If using direct API, add /v1beta prefix
+    return `${this.provider.baseUrl}/v1beta${endpoint}`;
+  }
+
   async generateResponse(request: GenerateRequest): Promise<GenerateResponse> {
     try {
       if (!this.provider.apiKey) {
@@ -421,7 +450,7 @@ class GeminiProviderService extends BaseProviderService {
         : request.prompt;
 
       const response = await axios.post(
-        `${this.provider.baseUrl}/v1beta/models/${request.model}:generateContent?key=${this.provider.apiKey}`,
+        `${this.getApiUrl(`/models/${request.model}:generateContent`)}?key=${this.provider.apiKey}`,
         {
           contents: [{
             parts: [{ text: prompt }]
@@ -512,7 +541,7 @@ class GeminiProviderService extends BaseProviderService {
 
       // Test with a simple request
       await axios.post(
-        `${this.provider.baseUrl}/v1beta/models/gemini-pro:generateContent?key=${this.provider.apiKey}`,
+        `${this.getApiUrl('/models/gemini-pro:generateContent')}?key=${this.provider.apiKey}`,
         {
           contents: [{
             parts: [{ text: 'Hello' }]

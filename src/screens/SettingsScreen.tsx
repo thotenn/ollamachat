@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '../contexts/SettingsContext';
 import providerService, { AIModel } from '../services/providerService';
 import { Provider, Assistant } from '../types';
+import CorsWarning from '../components/CorsWarning';
 
 const SettingsScreen: React.FC = () => {
   const {
@@ -60,6 +61,11 @@ const SettingsScreen: React.FC = () => {
     }
   }, [isConnected, currentProvider]);
 
+  // Sincronizar selectedModel con settings globales
+  useEffect(() => {
+    setSelectedModel(settings.selectedModel);
+  }, [settings.selectedModel]);
+
   const loadModels = async () => {
     if (!currentProvider) return;
     
@@ -68,8 +74,12 @@ const SettingsScreen: React.FC = () => {
       const availableModels = await providerService.getModels(currentProvider.id);
       setModels(availableModels);
       
+      // Auto-seleccionar el primer modelo si no hay uno válido seleccionado
       if (availableModels.length > 0 && !availableModels.find(m => m.name === selectedModel)) {
-        setSelectedModel(availableModels[0].name);
+        const firstModel = availableModels[0].name;
+        setSelectedModel(firstModel);
+        // Guardar automáticamente el modelo seleccionado
+        await updateSettings({ selectedModel: firstModel });
       }
     } catch (error) {
       console.error('Error loading models:', error);
@@ -97,6 +107,8 @@ const SettingsScreen: React.FC = () => {
       await updateSettings({ selectedProviderId: providerId });
       setModels([]);
       setSelectedModel('');
+      // Guardar automáticamente el modelo vacío
+      await updateSettings({ selectedModel: '' });
     } catch (error) {
       console.error('Error changing provider:', error);
     }
@@ -198,6 +210,8 @@ const SettingsScreen: React.FC = () => {
           <Text style={styles.headerTitle}>Configuración</Text>
         </View>
 
+        <CorsWarning />
+
         {/* Providers Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Proveedores de IA</Text>
@@ -257,7 +271,10 @@ const SettingsScreen: React.FC = () => {
                     styles.modelItem,
                     selectedModel === model.name && styles.modelItemSelected,
                   ]}
-                  onPress={() => setSelectedModel(model.name)}
+                  onPress={async () => {
+                    setSelectedModel(model.name);
+                    await updateSettings({ selectedModel: model.name });
+                  }}
                 >
                   <Text
                     style={[

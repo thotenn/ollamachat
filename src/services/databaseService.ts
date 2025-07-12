@@ -89,6 +89,24 @@ class NativeDatabaseService implements DatabaseAdapter {
     await this.initializeDefaultData();
   }
 
+  private getProviderBaseUrl(type: string): string {
+    // For web development, use CORS proxy or show warning
+    const isWeb = Platform.OS === 'web';
+    
+    switch (type) {
+      case 'ollama':
+        return 'http://localhost:11434';
+      case 'anthropic':
+        return isWeb ? 'http://localhost:8010' : 'https://api.anthropic.com';
+      case 'openai':
+        return isWeb ? 'http://localhost:8011' : 'https://api.openai.com';
+      case 'gemini':
+        return isWeb ? 'http://localhost:8012' : 'https://generativelanguage.googleapis.com';
+      default:
+        return 'http://localhost:11434';
+    }
+  }
+
   private async initializeDefaultData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -104,28 +122,28 @@ class NativeDatabaseService implements DatabaseAdapter {
           id: 'ollama-default',
           name: 'Ollama',
           type: 'ollama',
-          baseUrl: 'http://localhost:11434',
+          baseUrl: this.getProviderBaseUrl('ollama'),
           isDefault: true,
         },
         {
           id: 'anthropic-default',
           name: 'Anthropic',
           type: 'anthropic',
-          baseUrl: 'https://api.anthropic.com',
+          baseUrl: this.getProviderBaseUrl('anthropic'),
           isDefault: false,
         },
         {
           id: 'openai-default',
           name: 'OpenAI',
           type: 'openai',
-          baseUrl: 'https://api.openai.com',
+          baseUrl: this.getProviderBaseUrl('openai'),
           isDefault: false,
         },
         {
           id: 'gemini-default',
           name: 'Google Gemini',
           type: 'gemini',
-          baseUrl: 'https://generativelanguage.googleapis.com',
+          baseUrl: this.getProviderBaseUrl('gemini'),
           isDefault: false,
         },
       ];

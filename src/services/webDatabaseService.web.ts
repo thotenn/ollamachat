@@ -107,6 +107,22 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.saveToIndexedDB();
   }
 
+  private getProviderBaseUrl(type: string): string {
+    // For web development, use CORS proxy
+    switch (type) {
+      case 'ollama':
+        return 'http://localhost:11434';
+      case 'anthropic':
+        return 'http://localhost:8010'; // CORS proxy
+      case 'openai':
+        return 'http://localhost:8011'; // CORS proxy
+      case 'gemini':
+        return 'http://localhost:8012'; // CORS proxy
+      default:
+        return 'http://localhost:11434';
+    }
+  }
+
   private async initializeDefaultData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -122,28 +138,28 @@ class WebDatabaseService implements DatabaseAdapter {
           id: 'ollama-default',
           name: 'Ollama',
           type: 'ollama',
-          baseUrl: 'http://localhost:11434',
+          baseUrl: this.getProviderBaseUrl('ollama'),
           isDefault: true,
         },
         {
           id: 'anthropic-default',
           name: 'Anthropic',
           type: 'anthropic',
-          baseUrl: 'https://api.anthropic.com',
+          baseUrl: this.getProviderBaseUrl('anthropic'),
           isDefault: false,
         },
         {
           id: 'openai-default',
           name: 'OpenAI',
           type: 'openai',
-          baseUrl: 'https://api.openai.com',
+          baseUrl: this.getProviderBaseUrl('openai'),
           isDefault: false,
         },
         {
           id: 'gemini-default',
           name: 'Google Gemini',
           type: 'gemini',
-          baseUrl: 'https://generativelanguage.googleapis.com',
+          baseUrl: this.getProviderBaseUrl('gemini'),
           isDefault: false,
         },
       ];
