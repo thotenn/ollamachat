@@ -50,9 +50,31 @@ export interface OllamaModel {
   };
 }
 
+export interface Provider {
+  id: string;
+  name: string;
+  type: 'ollama' | 'anthropic' | 'openai' | 'gemini';
+  baseUrl: string;
+  apiKey?: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Assistant {
+  id: string;
+  name: string;
+  description: string;
+  instructions: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppSettings {
-  ollamaUrl: string;
+  selectedProviderId: string;
   selectedModel: string;
+  selectedAssistantId: string;
 }
 
 export interface ChatConversation {
@@ -61,7 +83,16 @@ export interface ChatConversation {
   createdAt: string;
   updatedAt: string;
   model: string;
+  providerId: string;
+  assistantId: string;
   context?: string; // JSON stringified context array
+}
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  timestamp: Date;
+  isUser: boolean;
 }
 
 export interface ChatMessageDB {

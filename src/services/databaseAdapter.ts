@@ -1,4 +1,4 @@
-import { ChatConversation, ChatMessageDB, ChatMessage } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
 
 export interface DatabaseAdapter {
   initDatabase(): Promise<void>;
@@ -12,6 +12,16 @@ export interface DatabaseAdapter {
   getMessageCount(conversationId: string): Promise<number>;
   getUserMessages(conversationId: string, limit?: number): Promise<string[]>;
   clearAllData(): Promise<void>;
+  
+  // Provider methods
+  getProviders(): Promise<Provider[]>;
+  updateProvider(id: string, updates: Partial<Provider>): Promise<void>;
+  
+  // Assistant methods
+  getAssistants(): Promise<Assistant[]>;
+  createAssistant(assistant: Omit<Assistant, 'id' | 'createdAt' | 'updatedAt'>): Promise<string>;
+  updateAssistant(id: string, updates: Partial<Assistant>): Promise<void>;
+  deleteAssistant(id: string): Promise<void>;
 }
 
 export interface DatabaseRow {

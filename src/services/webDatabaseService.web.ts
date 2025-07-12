@@ -1,6 +1,6 @@
 import initSqlJs, { Database } from 'sql.js';
 import { DatabaseAdapter, DatabaseRow } from './databaseAdapter';
-import { ChatConversation, ChatMessageDB, ChatMessage } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
 
 class WebDatabaseService implements DatabaseAdapter {
   private db: Database | null = null;
@@ -44,13 +44,42 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS providers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        api_key TEXT,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS assistants (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        instructions TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS conversations (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         model TEXT NOT NULL,
-        context TEXT
+        provider_id TEXT NOT NULL,
+        assistant_id TEXT NOT NULL,
+        context TEXT,
+        FOREIGN KEY (provider_id) REFERENCES providers (id),
+        FOREIGN KEY (assistant_id) REFERENCES assistants (id)
       );
     `);
 
@@ -71,8 +100,80 @@ class WebDatabaseService implements DatabaseAdapter {
       ON messages (conversation_id, message_order);
     `);
 
+    // Initialize default data
+    await this.initializeDefaultData();
+
     // Save the database after creating tables
     await this.saveToIndexedDB();
+  }
+
+  private async initializeDefaultData(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = new Date().toISOString();
+
+    // Check if we already have providers
+    const existingProviders = this.db.exec('SELECT COUNT(*) as count FROM providers');
+    
+    if (existingProviders[0]?.values[0]?.[0] === 0) {
+      // Create default providers
+      const defaultProviders = [
+        {
+          id: 'ollama-default',
+          name: 'Ollama',
+          type: 'ollama',
+          baseUrl: 'http://localhost:11434',
+          isDefault: true,
+        },
+        {
+          id: 'anthropic-default',
+          name: 'Anthropic',
+          type: 'anthropic',
+          baseUrl: 'https://api.anthropic.com',
+          isDefault: false,
+        },
+        {
+          id: 'openai-default',
+          name: 'OpenAI',
+          type: 'openai',
+          baseUrl: 'https://api.openai.com',
+          isDefault: false,
+        },
+        {
+          id: 'gemini-default',
+          name: 'Google Gemini',
+          type: 'gemini',
+          baseUrl: 'https://generativelanguage.googleapis.com',
+          isDefault: false,
+        },
+      ];
+
+      for (const provider of defaultProviders) {
+        this.db.exec(
+          'INSERT INTO providers (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
+        );
+      }
+    }
+
+    // Check if we already have assistants
+    const existingAssistants = this.db.exec('SELECT COUNT(*) as count FROM assistants');
+    
+    if (existingAssistants[0]?.values[0]?.[0] === 0) {
+      // Create default assistant
+      const defaultAssistant = {
+        id: 'default-assistant',
+        name: 'Asistente General',
+        description: 'Asistente de propósito general para conversaciones',
+        instructions: 'Eres un asistente útil y amigable. Responde de manera clara y concisa a las preguntas del usuario.',
+        isDefault: true,
+      };
+
+      this.db.exec(
+        'INSERT INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [defaultAssistant.id, defaultAssistant.name, defaultAssistant.description, defaultAssistant.instructions, 1, now, now]
+      );
+    }
   }
 
   private async saveToIndexedDB(): Promise<void> {
@@ -146,8 +247,8 @@ class WebDatabaseService implements DatabaseAdapter {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     
     this.db.run(
-      'INSERT INTO conversations (id, title, created_at, updated_at, model, context) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, conversation.title, conversation.createdAt, conversation.updatedAt, conversation.model, conversation.context || null]
+      'INSERT INTO conversations (id, title, created_at, updated_at, model, provider_id, assistant_id, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, conversation.title, conversation.createdAt, conversation.updatedAt, conversation.model, conversation.providerId, conversation.assistantId, conversation.context || null]
     );
 
     await this.saveToIndexedDB();
@@ -225,6 +326,8 @@ class WebDatabaseService implements DatabaseAdapter {
         createdAt: row.created_at as string,
         updatedAt: row.updated_at as string,
         model: row.model as string,
+        providerId: row.provider_id as string,
+        assistantId: row.assistant_id as string,
         context: row.context as string,
       }));
     } catch (error) {
@@ -285,6 +388,8 @@ class WebDatabaseService implements DatabaseAdapter {
           createdAt: result.created_at as string,
           updatedAt: result.updated_at as string,
           model: result.model as string,
+          providerId: result.provider_id as string,
+          assistantId: result.assistant_id as string,
           context: result.context as string,
         };
       }
@@ -345,6 +450,190 @@ class WebDatabaseService implements DatabaseAdapter {
     this.db.run('DELETE FROM messages');
     this.db.run('DELETE FROM conversations');
     
+    await this.saveToIndexedDB();
+  }
+
+  // Provider methods
+  async getProviders(): Promise<Provider[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = this.db.exec('SELECT * FROM providers ORDER BY is_default DESC, name ASC');
+      
+      if (!result || result.length === 0) return [];
+
+      const columns = result[0].columns;
+      const values = result[0].values;
+
+      return values.map((row: any[]) => {
+        const provider: any = {};
+        columns.forEach((col: string, index: number) => {
+          provider[col] = row[index];
+        });
+
+        return {
+          id: provider.id,
+          name: provider.name,
+          type: provider.type as 'ollama' | 'anthropic' | 'openai' | 'gemini',
+          baseUrl: provider.base_url,
+          apiKey: provider.api_key,
+          isDefault: provider.is_default === 1,
+          createdAt: provider.created_at,
+          updatedAt: provider.updated_at,
+        };
+      });
+    } catch (error) {
+      console.error('Error in getProviders:', error);
+      return [];
+    }
+  }
+
+  async updateProvider(id: string, updates: Partial<Provider>): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const fields = [];
+    const values = [];
+
+    if (updates.name !== undefined) {
+      fields.push('name = ?');
+      values.push(updates.name);
+    }
+
+    if (updates.baseUrl !== undefined) {
+      fields.push('base_url = ?');
+      values.push(updates.baseUrl);
+    }
+
+    if (updates.apiKey !== undefined) {
+      fields.push('api_key = ?');
+      values.push(updates.apiKey);
+    }
+
+    if (updates.isDefault !== undefined) {
+      // First, remove default from all providers if setting a new default
+      if (updates.isDefault) {
+        this.db.run('UPDATE providers SET is_default = 0');
+      }
+      fields.push('is_default = ?');
+      values.push(updates.isDefault ? 1 : 0);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(id);
+    
+    this.db.run(
+      `UPDATE providers SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    await this.saveToIndexedDB();
+  }
+
+  // Assistant methods
+  async getAssistants(): Promise<Assistant[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = this.db.exec('SELECT * FROM assistants ORDER BY is_default DESC, name ASC');
+      
+      if (!result || result.length === 0) return [];
+
+      const columns = result[0].columns;
+      const values = result[0].values;
+
+      return values.map((row: any[]) => {
+        const assistant: any = {};
+        columns.forEach((col: string, index: number) => {
+          assistant[col] = row[index];
+        });
+
+        return {
+          id: assistant.id,
+          name: assistant.name,
+          description: assistant.description,
+          instructions: assistant.instructions,
+          isDefault: assistant.is_default === 1,
+          createdAt: assistant.created_at,
+          updatedAt: assistant.updated_at,
+        };
+      });
+    } catch (error) {
+      console.error('Error in getAssistants:', error);
+      return [];
+    }
+  }
+
+  async createAssistant(assistant: Omit<Assistant, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    const now = new Date().toISOString();
+
+    // If setting as default, remove default from all others
+    if (assistant.isDefault) {
+      this.db.run('UPDATE assistants SET is_default = 0');
+    }
+    
+    this.db.run(
+      'INSERT INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, assistant.name, assistant.description, assistant.instructions, assistant.isDefault ? 1 : 0, now, now]
+    );
+
+    await this.saveToIndexedDB();
+    return id;
+  }
+
+  async updateAssistant(id: string, updates: Partial<Assistant>): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const fields = [];
+    const values = [];
+
+    if (updates.name !== undefined) {
+      fields.push('name = ?');
+      values.push(updates.name);
+    }
+
+    if (updates.description !== undefined) {
+      fields.push('description = ?');
+      values.push(updates.description);
+    }
+
+    if (updates.instructions !== undefined) {
+      fields.push('instructions = ?');
+      values.push(updates.instructions);
+    }
+
+    if (updates.isDefault !== undefined) {
+      // First, remove default from all assistants if setting a new default
+      if (updates.isDefault) {
+        this.db.run('UPDATE assistants SET is_default = 0');
+      }
+      fields.push('is_default = ?');
+      values.push(updates.isDefault ? 1 : 0);
+    }
+
+    if (fields.length === 0) return;
+
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(id);
+    
+    this.db.run(
+      `UPDATE assistants SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    await this.saveToIndexedDB();
+  }
+
+  async deleteAssistant(id: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM assistants WHERE id = ?', [id]);
     await this.saveToIndexedDB();
   }
 }

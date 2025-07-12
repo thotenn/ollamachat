@@ -1,5 +1,5 @@
 import { DatabaseAdapter } from './databaseAdapter';
-import { ChatConversation, ChatMessageDB, ChatMessage } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
 
 // Stub implementation for native platforms - should never be used
 class WebDatabaseServiceStub implements DatabaseAdapter {
@@ -44,6 +44,32 @@ class WebDatabaseServiceStub implements DatabaseAdapter {
   }
 
   async clearAllData(): Promise<void> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  // Provider methods
+  async getProviders(): Promise<Provider[]> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  async updateProvider(id: string, updates: Partial<Provider>): Promise<void> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  // Assistant methods
+  async getAssistants(): Promise<Assistant[]> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  async createAssistant(assistant: Omit<Assistant, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  async updateAssistant(id: string, updates: Partial<Assistant>): Promise<void> {
+    throw new Error('WebDatabaseService should not be used on native platforms');
+  }
+
+  async deleteAssistant(id: string): Promise<void> {
     throw new Error('WebDatabaseService should not be used on native platforms');
   }
 }

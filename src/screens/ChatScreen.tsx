@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
-import ollamaService from '../services/ollamaService';
+import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessageDB } from '../types';
 
 interface ChatScreenProps {
   conversationId?: string;
-  onConversationChange?: (conversationId: string) => void;
+  onConversationChange?: (conversationId: string | undefined) => void;
 }
 
 const ChatScreen: React.FC<ChatScreenProps> = ({ 
@@ -19,10 +19,18 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const { settings, isConnected } = useSettings();
+  const { 
+    settings, 
+    isConnected, 
+    assistants, 
+    currentProvider, 
+    currentAssistant,
+    updateSettings 
+  } = useSettings();
   const [context, setContext] = useState<number[] | undefined>();
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(conversationId);
   const [messageCount, setMessageCount] = useState(0);
+  const [assistantModalVisible, setAssistantModalVisible] = useState(false);
 
   useEffect(() => {
     const initDatabase = async () => {
@@ -41,7 +49,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     } else if (!conversationId) {
       startNewConversation();
     }
-  }, [conversationId, settings.selectedModel]);
+  }, [conversationId, settings.selectedModel, currentProvider, currentAssistant]);
 
   const loadConversation = async (convId: string) => {
     try {
@@ -73,10 +81,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const startNewConversation = () => {
+    const assistantName = currentAssistant?.name || 'Asistente';
+    const providerName = currentProvider?.name || 'IA';
+    
     setMessages([
       {
         id: '1',
-        text: `¡Hola! Soy tu asistente con ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
+        text: `¡Hola! Soy ${assistantName} usando ${providerName} con el modelo ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
         timestamp: new Date(),
         isUser: false,
       },
@@ -87,8 +98,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const handleSendMessage = useCallback(async (text: string) => {
-    if (!isConnected) {
-      Alert.alert('Sin conexión', 'No se puede conectar con el servidor Ollama');
+    if (!isConnected || !currentProvider) {
+      Alert.alert('Sin conexión', 'No se puede conectar con el proveedor de IA');
       return;
     }
 
@@ -124,6 +135,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           createdAt: now,
           updatedAt: now,
           model: settings.selectedModel,
+          providerId: currentProvider.id,
+          assistantId: currentAssistant?.id || 'default-assistant',
         });
         setCurrentConversationId(conversationId);
         onConversationChange?.(conversationId);
@@ -150,11 +163,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       
       console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
       
-      await ollamaService.streamResponse(
+      await providerService.streamResponse(
+        currentProvider.id,
         {
           model: settings.selectedModel,
           prompt: text,
           context: context,
+          instructions: currentAssistant?.instructions,
         },
         (chunk: string) => {
           fullResponse += chunk;
@@ -203,7 +218,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
                 const userMessages = await databaseService.getUserMessages(conversationId, 3);
                 const conversationContext = userMessages.join(' ');
                 
-                const title = await ollamaService.generateChatTitle(conversationContext, settings.selectedModel);
+                const title = await providerService.generateChatTitle(currentProvider.id, conversationContext, settings.selectedModel);
                 await databaseService.updateConversation(conversationId, { title });
                 console.log(`Generated title (message ${userMessageCount}/3):`, title);
               } catch (error) {
@@ -223,7 +238,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         previousMessages.filter(msg => msg.id !== tempMessage.id)
       );
     }
-  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange]);
+  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant]);
 
   const handleClearConversation = useCallback(() => {
     console.log('Clear conversation button pressed, Platform:', Platform.OS);
@@ -261,10 +276,28 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   }, [onConversationChange]);
 
+  const handleAssistantChange = async (assistantId: string) => {
+    try {
+      await updateSettings({ selectedAssistantId: assistantId });
+      setAssistantModalVisible(false);
+    } catch (error) {
+      console.error('Error changing assistant:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Ollama Chat</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>AI Chat</Text>
+          <TouchableOpacity 
+            style={styles.assistantSelector}
+            onPress={() => setAssistantModalVisible(true)}
+          >
+            <Text style={styles.assistantName}>{currentAssistant?.name || 'Asistente'}</Text>
+            <Ionicons name="chevron-down" size={16} color="#666" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.newChatButton}
@@ -278,7 +311,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           </TouchableOpacity>
           <View style={styles.statusContainer}>
             <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
-            <Text style={styles.statusText}>{settings.selectedModel}</Text>
+            <Text style={styles.statusText}>{currentProvider?.name || 'No provider'}</Text>
             {context && (
               <View style={styles.contextIndicator}>
                 <Ionicons name="link" size={12} color="#007AFF" />
@@ -290,7 +323,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       {!isConnected ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="warning-outline" size={48} color="#666" />
-          <Text style={styles.emptyText}>No conectado al servidor Ollama</Text>
+          <Text style={styles.emptyText}>No conectado al proveedor de IA</Text>
           <Text style={styles.emptySubtext}>Verifica la configuración</Text>
         </View>
       ) : (
@@ -301,6 +334,52 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           placeholder="Escribe un mensaje..."
         />
       )}
+
+      {/* Assistant Selection Modal */}
+      <Modal
+        visible={assistantModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        transparent={false}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setAssistantModalVisible(false)}>
+              <Text style={styles.modalCancel}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Seleccionar Asistente</Text>
+            <View style={styles.modalPlaceholder} />
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            {assistants.map((assistant) => (
+              <TouchableOpacity
+                key={assistant.id}
+                style={[
+                  styles.assistantOption,
+                  settings.selectedAssistantId === assistant.id && styles.assistantOptionSelected,
+                ]}
+                onPress={() => handleAssistantChange(assistant.id)}
+              >
+                <View style={styles.assistantOptionMain}>
+                  <Text
+                    style={[
+                      styles.assistantOptionName,
+                      settings.selectedAssistantId === assistant.id && styles.assistantOptionNameSelected,
+                    ]}
+                  >
+                    {assistant.name}
+                  </Text>
+                  <Text style={styles.assistantOptionDescription}>{assistant.description}</Text>
+                </View>
+                {settings.selectedAssistantId === assistant.id && (
+                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -319,10 +398,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  assistantSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  assistantName: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -370,6 +463,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalCancel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  modalPlaceholder: {
+    width: 60,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  assistantOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  assistantOptionSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#e6f2ff',
+  },
+  assistantOptionMain: {
+    flex: 1,
+  },
+  assistantOptionName: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 4,
+  },
+  assistantOptionNameSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  assistantOptionDescription: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

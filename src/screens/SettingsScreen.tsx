@@ -8,31 +8,64 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '../contexts/SettingsContext';
-import ollamaService from '../services/ollamaService';
-import { OllamaModel } from '../types';
+import providerService, { AIModel } from '../services/providerService';
+import { Provider, Assistant } from '../types';
 
 const SettingsScreen: React.FC = () => {
-  const { settings, updateSettings, isConnected, checkConnection } = useSettings();
-  const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaUrl);
-  const [models, setModels] = useState<OllamaModel[]>([]);
+  const {
+    settings,
+    updateSettings,
+    isConnected,
+    checkConnection,
+    providers,
+    assistants,
+    currentProvider,
+    currentAssistant,
+    refreshProviders,
+    refreshAssistants,
+    updateProvider,
+    createAssistant,
+    updateAssistant,
+    deleteAssistant,
+  } = useSettings();
+
+  const [models, setModels] = useState<AIModel[]>([]);
   const [selectedModel, setSelectedModel] = useState(settings.selectedModel);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Provider editing state
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
+  const [providerModalVisible, setProviderModalVisible] = useState(false);
+  
+  // Assistant editing state
+  const [editingAssistant, setEditingAssistant] = useState<Assistant | null>(null);
+  const [assistantModalVisible, setAssistantModalVisible] = useState(false);
+  const [newAssistant, setNewAssistant] = useState({
+    name: '',
+    description: '',
+    instructions: '',
+    isDefault: false,
+  });
 
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && currentProvider) {
       loadModels();
     }
-  }, [isConnected]);
+  }, [isConnected, currentProvider]);
 
   const loadModels = async () => {
+    if (!currentProvider) return;
+    
     setIsLoading(true);
     try {
-      const availableModels = await ollamaService.getModels();
+      const availableModels = await providerService.getModels(currentProvider.id);
       setModels(availableModels);
       
       if (availableModels.length > 0 && !availableModels.find(m => m.name === selectedModel)) {
@@ -49,7 +82,6 @@ const SettingsScreen: React.FC = () => {
     setIsSaving(true);
     try {
       await updateSettings({
-        ollamaUrl: ollamaUrl.trim(),
         selectedModel,
       });
       Alert.alert('Éxito', 'Configuración guardada correctamente');
@@ -60,19 +92,103 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const handleTestConnection = async () => {
-    setIsLoading(true);
-    ollamaService.setBaseUrl(ollamaUrl);
-    await checkConnection();
-    const connected = await ollamaService.checkConnection();
-    
-    if (connected) {
-      Alert.alert('Éxito', 'Conexión establecida correctamente');
-      loadModels();
-    } else {
-      Alert.alert('Error', 'No se pudo conectar con el servidor Ollama');
+  const handleProviderChange = async (providerId: string) => {
+    try {
+      await updateSettings({ selectedProviderId: providerId });
+      setModels([]);
+      setSelectedModel('');
+    } catch (error) {
+      console.error('Error changing provider:', error);
     }
-    setIsLoading(false);
+  };
+
+  const handleAssistantChange = async (assistantId: string) => {
+    try {
+      await updateSettings({ selectedAssistantId: assistantId });
+    } catch (error) {
+      console.error('Error changing assistant:', error);
+    }
+  };
+
+  const openProviderEdit = (provider: Provider) => {
+    setEditingProvider({ ...provider });
+    setProviderModalVisible(true);
+  };
+
+  const handleProviderSave = async () => {
+    if (!editingProvider) return;
+    
+    try {
+      await updateProvider(editingProvider.id, {
+        name: editingProvider.name,
+        baseUrl: editingProvider.baseUrl,
+        apiKey: editingProvider.apiKey,
+      });
+      setProviderModalVisible(false);
+      Alert.alert('Éxito', 'Proveedor actualizado correctamente');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el proveedor');
+    }
+  };
+
+  const openAssistantEdit = (assistant?: Assistant) => {
+    if (assistant) {
+      setEditingAssistant({ ...assistant });
+      setNewAssistant({
+        name: assistant.name,
+        description: assistant.description,
+        instructions: assistant.instructions,
+        isDefault: assistant.isDefault,
+      });
+    } else {
+      setEditingAssistant(null);
+      setNewAssistant({
+        name: '',
+        description: '',
+        instructions: 'Eres un asistente útil y amigable. Responde de manera clara y concisa a las preguntas del usuario.',
+        isDefault: false,
+      });
+    }
+    setAssistantModalVisible(true);
+  };
+
+  const handleAssistantSave = async () => {
+    try {
+      if (editingAssistant) {
+        // Update existing assistant
+        await updateAssistant(editingAssistant.id, newAssistant);
+        Alert.alert('Éxito', 'Asistente actualizado correctamente');
+      } else {
+        // Create new assistant
+        await createAssistant(newAssistant);
+        Alert.alert('Éxito', 'Asistente creado correctamente');
+      }
+      setAssistantModalVisible(false);
+    } catch (error) {
+      Alert.alert('Error', editingAssistant ? 'No se pudo actualizar el asistente' : 'No se pudo crear el asistente');
+    }
+  };
+
+  const handleAssistantDelete = async (assistantId: string) => {
+    Alert.alert(
+      'Confirmar eliminación',
+      '¿Estás seguro de que quieres eliminar este asistente?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAssistant(assistantId);
+              Alert.alert('Éxito', 'Asistente eliminado correctamente');
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar el asistente');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -82,29 +198,42 @@ const SettingsScreen: React.FC = () => {
           <Text style={styles.headerTitle}>Configuración</Text>
         </View>
 
+        {/* Providers Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Servidor Ollama</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={ollamaUrl}
-              onChangeText={setOllamaUrl}
-              placeholder="http://localhost:11434"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+          <Text style={styles.sectionTitle}>Proveedores de IA</Text>
+          <Text style={styles.sectionSubtitle}>Selecciona y configura tu proveedor de IA</Text>
+          
+          {providers.map((provider) => (
             <TouchableOpacity
-              style={styles.testButton}
-              onPress={handleTestConnection}
-              disabled={isLoading}
+              key={provider.id}
+              style={[
+                styles.providerItem,
+                settings.selectedProviderId === provider.id && styles.providerItemSelected,
+              ]}
+              onPress={() => handleProviderChange(provider.id)}
             >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={styles.testButtonText}>Probar</Text>
-              )}
+              <View style={styles.providerMain}>
+                <Text
+                  style={[
+                    styles.providerName,
+                    settings.selectedProviderId === provider.id && styles.providerNameSelected,
+                  ]}
+                >
+                  {provider.name}
+                </Text>
+                <Text style={styles.providerType}>{provider.type.toUpperCase()}</Text>
+                {settings.selectedProviderId === provider.id && (
+                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => openProviderEdit(provider)}
+              >
+                <Ionicons name="settings-outline" size={18} color="#666" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </View>
+          ))}
           
           <View style={styles.statusContainer}>
             <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
@@ -114,6 +243,7 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Models Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Modelo</Text>
           {isLoading ? (
@@ -135,7 +265,7 @@ const SettingsScreen: React.FC = () => {
                       selectedModel === model.name && styles.modelNameSelected,
                     ]}
                   >
-                    {model.name}
+                    {model.displayName || model.name}
                   </Text>
                   {selectedModel === model.name && (
                     <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
@@ -145,9 +275,65 @@ const SettingsScreen: React.FC = () => {
             </View>
           ) : (
             <Text style={styles.noModelsText}>
-              {isConnected ? 'No hay modelos disponibles' : 'Conecta con el servidor para ver los modelos'}
+              {isConnected ? 'No hay modelos disponibles' : 'Conecta con el proveedor para ver los modelos'}
             </Text>
           )}
+        </View>
+
+        {/* Assistants Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Asistentes</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => openAssistantEdit()}
+            >
+              <Ionicons name="add" size={20} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.sectionSubtitle}>Selecciona o crea asistentes personalizados</Text>
+          
+          {assistants.map((assistant) => (
+            <TouchableOpacity
+              key={assistant.id}
+              style={[
+                styles.assistantItem,
+                settings.selectedAssistantId === assistant.id && styles.assistantItemSelected,
+              ]}
+              onPress={() => handleAssistantChange(assistant.id)}
+            >
+              <View style={styles.assistantMain}>
+                <Text
+                  style={[
+                    styles.assistantName,
+                    settings.selectedAssistantId === assistant.id && styles.assistantNameSelected,
+                  ]}
+                >
+                  {assistant.name}
+                </Text>
+                <Text style={styles.assistantDescription}>{assistant.description}</Text>
+                {settings.selectedAssistantId === assistant.id && (
+                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                )}
+              </View>
+              <View style={styles.assistantActions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => openAssistantEdit(assistant)}
+                >
+                  <Ionicons name="create-outline" size={18} color="#666" />
+                </TouchableOpacity>
+                {!assistant.isDefault && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleAssistantDelete(assistant.id)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#F44336" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TouchableOpacity
@@ -161,17 +347,131 @@ const SettingsScreen: React.FC = () => {
             <Text style={styles.saveButtonText}>Guardar Configuración</Text>
           )}
         </TouchableOpacity>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>Información</Text>
-          <Text style={styles.infoText}>
-            Para usar esta aplicación, necesitas tener Ollama ejecutándose en tu servidor.
-          </Text>
-          <Text style={styles.infoText}>
-            Asegúrate de que Ollama esté configurado para aceptar conexiones desde tu dispositivo.
-          </Text>
-        </View>
       </ScrollView>
+
+      {/* Provider Edit Modal */}
+      <Modal
+        visible={providerModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setProviderModalVisible(false)}>
+              <Text style={styles.modalCancel}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Configurar Proveedor</Text>
+            <TouchableOpacity onPress={handleProviderSave}>
+              <Text style={styles.modalSave}>Guardar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {editingProvider && (
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Nombre</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editingProvider.name}
+                  onChangeText={(text) => setEditingProvider({ ...editingProvider, name: text })}
+                  placeholder="Nombre del proveedor"
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>URL Base</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editingProvider.baseUrl}
+                  onChangeText={(text) => setEditingProvider({ ...editingProvider, baseUrl: text })}
+                  placeholder="https://api.example.com"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>API Key (opcional)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editingProvider.apiKey || ''}
+                  onChangeText={(text) => setEditingProvider({ ...editingProvider, apiKey: text })}
+                  placeholder="Tu API Key"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* Assistant Edit Modal */}
+      <Modal
+        visible={assistantModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setAssistantModalVisible(false)}>
+              <Text style={styles.modalCancel}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              {editingAssistant ? 'Editar Asistente' : 'Nuevo Asistente'}
+            </Text>
+            <TouchableOpacity onPress={handleAssistantSave}>
+              <Text style={styles.modalSave}>Guardar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Nombre</Text>
+              <TextInput
+                style={styles.formInput}
+                value={newAssistant.name}
+                onChangeText={(text) => setNewAssistant({ ...newAssistant, name: text })}
+                placeholder="Nombre del asistente"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Descripción</Text>
+              <TextInput
+                style={styles.formInput}
+                value={newAssistant.description}
+                onChangeText={(text) => setNewAssistant({ ...newAssistant, description: text })}
+                placeholder="Breve descripción del asistente"
+                multiline
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Instrucciones</Text>
+              <TextInput
+                style={[styles.formInput, styles.formTextArea]}
+                value={newAssistant.instructions}
+                onChangeText={(text) => setNewAssistant({ ...newAssistant, instructions: text })}
+                placeholder="Instrucciones detalladas para el asistente..."
+                multiline
+                numberOfLines={6}
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <View style={styles.switchRow}>
+                <Text style={styles.formLabel}>Asistente por defecto</Text>
+                <Switch
+                  value={newAssistant.isDefault}
+                  onValueChange={(value) => setNewAssistant({ ...newAssistant, isDefault: value })}
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -207,37 +507,65 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 12,
   },
-  inputContainer: {
+  addButton: {
+    padding: 4,
+  },
+  providerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  providerItemSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#e6f2ff',
+  },
+  providerMain: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  input: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+  providerName: {
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: '#333',
+    marginRight: 8,
   },
-  testButton: {
-    marginLeft: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-  },
-  testButtonText: {
-    color: 'white',
+  providerNameSelected: {
+    color: '#007AFF',
     fontWeight: '600',
-    fontSize: 16,
+  },
+  providerType: {
+    fontSize: 12,
+    color: '#666',
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  editButton: {
+    padding: 8,
   },
   statusContainer: {
     flexDirection: 'row',
@@ -280,6 +608,45 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  assistantItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  assistantItemSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#e6f2ff',
+  },
+  assistantMain: {
+    flex: 1,
+  },
+  assistantName: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 2,
+  },
+  assistantNameSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  assistantDescription: {
+    fontSize: 12,
+    color: '#666',
+  },
+  assistantActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
   noModelsText: {
     textAlign: 'center',
     color: '#999',
@@ -306,21 +673,63 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  infoSection: {
-    marginTop: 32,
-    paddingHorizontal: 32,
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
   },
-  infoTitle: {
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalCancel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  modalSave: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
   },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  formTextArea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
 
