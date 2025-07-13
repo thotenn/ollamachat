@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MessageRenderer from './MessageRenderer';
+import TypingIndicator from './TypingIndicator';
 import { COLORS } from '@env';
 
 export interface ChatMessage {
@@ -72,7 +73,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
     return (
       <View style={[styles.messageContainer, styles.botMessage]}>
         <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
-          <Text style={styles.typingText}>Escribiendo...</Text>
+          <TypingIndicator style={styles.typingIndicator} />
         </View>
       </View>
     );
@@ -210,6 +211,9 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT.SECONDARY,
     fontStyle: 'italic',
     fontSize: 14,
+  },
+  typingIndicator: {
+    paddingVertical: 2,
   },
   timestamp: {
     fontSize: 12,

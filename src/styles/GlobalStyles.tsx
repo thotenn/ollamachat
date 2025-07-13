@@ -276,9 +276,13 @@ export const COMMON_STYLES = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  
   listItemContent: {
     padding: 16,
+  },
+  typingText: {
+    color: COLORS.TEXT.SECONDARY,
+    fontStyle: 'italic',
+    fontSize: 14,
   },
 });
 
