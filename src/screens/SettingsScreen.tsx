@@ -280,19 +280,21 @@ const SettingsScreen: React.FC = () => {
               disabled={isChangingProvider}
             >
               <View style={COMMON_STYLES.itemMain}>
-                <Text
-                  style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
-                    color: settings.selectedProviderId === provider.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
-                    fontWeight: settings.selectedProviderId === provider.id ? '600' : 'normal',
-                    marginRight: 8,
-                  })}
-                >
-                  {provider.name}
-                </Text>
-                <Text style={styles.providerType}>{provider.type.toUpperCase()}</Text>
-                {settings.selectedProviderId === provider.id && (
-                  <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
-                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <Text
+                    style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                      color: settings.selectedProviderId === provider.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                      fontWeight: settings.selectedProviderId === provider.id ? '600' : 'normal',
+                      marginRight: 8,
+                    })}
+                  >
+                    {provider.name}
+                  </Text>
+                  {settings.selectedProviderId === provider.id && (
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
+                  )}
+                </View>
+                {/* <Text style={styles.providerType}>{provider.type.toUpperCase()}</Text> */}
               </View>
               <TouchableOpacity
                 style={COMMON_STYLES.iconButton}
