@@ -421,6 +421,48 @@ npm install
 
 This project is licensed under the MIT License.
 
+
+## Version Management
+
+When publishing updates to app stores, you need to properly increment version numbers in two locations:
+
+### 1. User-Visible Version (app.json)
+Update the `version` field in `/app.json`:
+```json
+{
+  "expo": {
+    "version": "1.0.1"  // Change this for each release
+  }
+}
+```
+
+### 2. Internal Version Code (Android)
+Update `versionCode` in `/android/app/build.gradle`:
+```gradle
+android {
+  defaultConfig {
+    versionCode 2        // Must increment for each Play Store update
+    versionName "1.0.1"  // Should match app.json version
+  }
+}
+```
+
+### Version Update Rules
+
+**For Play Store updates:**
+- `versionCode` MUST be higher than previous release
+- `versionName` should follow semantic versioning (1.0.0 → 1.0.1 → 1.1.0)
+- Both files should be updated before building
+
+**Example version progression:**
+```
+Release 1: versionCode: 1, version: "1.0.0"
+Release 2: versionCode: 2, version: "1.0.1" 
+Release 3: versionCode: 3, version: "1.1.0"
+```
+
+**Important:** Always increment `versionCode` before running `eas build` for production releases.
+
 # For debugging purposes, you can use the following commands:
 # To build and install the Android app locally:
 ```bash
