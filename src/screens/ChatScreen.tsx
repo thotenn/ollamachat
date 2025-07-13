@@ -368,7 +368,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   return (
     <SafeAreaView 
       style={[COMMON_STYLES.screenContainer, Platform.OS === 'android' && styles.androidContainer]}
-      edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : ['top', 'bottom']}
+      edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : ['top', 'left', 'right']}
     >
       <View style={COMMON_STYLES.header}>
         <View style={COMMON_STYLES.headerLeft}>
@@ -428,7 +428,6 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'android' && {
       flex: 1,
       backgroundColor: COLORS.BACKGROUND.LIGHTER,
-      paddingBottom: 0,
     }),
   },
   assistantSelector: {
