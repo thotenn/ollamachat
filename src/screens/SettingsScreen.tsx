@@ -257,11 +257,11 @@ const SettingsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={COMMON_STYLES.screenContainer}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={COMMON_STYLES.header}>
-          <Text style={TYPOGRAPHY.HEADER_TITLE}>Configuración</Text>
-        </View>
+      <View style={COMMON_STYLES.header}>
+        <Text style={TYPOGRAPHY.HEADER_TITLE}>Configuración</Text>
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <CorsWarning />
 
         {/* Providers Section */}
@@ -550,6 +550,7 @@ const SettingsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   scrollContent: {
+    paddingTop: 0,
     paddingBottom: 30,
   },
   providerType: {
