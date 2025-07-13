@@ -182,6 +182,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       isUser: true,
     };
 
+    // Agregar mensaje del usuario MANTENIENDO el historial
     setMessages(previousMessages => [userMessage, ...previousMessages]);
     setIsTyping(true);
 
@@ -192,6 +193,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       isUser: false,
     };
 
+    // Agregar mensaje temporal MANTENIENDO el historial
     setMessages(previousMessages => [tempMessage, ...previousMessages]);
 
     try {
@@ -234,7 +236,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       let fullResponse = '';
       
       // Build message history for context-aware providers (like Anthropic)
-      const messageHistory = buildMessageHistory(messages, text);
+      // Usar los mensajes ANTES de agregar el temporal para evitar incluirlo en el contexto
+      const previousMessages = messages.filter(msg => !msg.id.startsWith('temp-'));
+      const messageHistory = buildMessageHistory(previousMessages, text);
       
       
       await providerService.streamResponse(
@@ -309,7 +313,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         previousMessages.filter(msg => msg.id !== tempMessage.id)
       );
     }
-  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant]);
+  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant, messages]);
 
   const handleClearConversation = useCallback(() => {
     

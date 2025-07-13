@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import MessageRenderer from './MessageRenderer';
 import { COLORS } from '@env';
 
 export interface ChatMessage {
@@ -52,12 +53,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
         styles.messageBubble,
         item.isUser ? styles.userBubble : styles.botBubble
       ]}>
-        <Text style={[
-          styles.messageText,
-          item.isUser ? styles.userText : styles.botText
-        ]}>
-          {item.text}
-        </Text>
+        <MessageRenderer text={item.text} isUser={item.isUser} />
         <Text style={[
           styles.timestamp,
           item.isUser ? styles.userTimestamp : styles.botTimestamp
@@ -136,18 +132,28 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     paddingTop: 16,
+    paddingBottom: 8,
   },
   messageContainer: {
     marginVertical: 4,
+    width: '100%',
+    flexDirection: 'row',
   },
   userMessage: {
-    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
   botMessage: {
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '80%',
+    ...(Platform.OS === 'android' ? {
+      maxWidth: '75%',
+      width: 'auto',
+    } : {
+      maxWidth: '85%',
+      flexShrink: 1,
+    }),
+    minWidth: '20%',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 18,
@@ -162,6 +168,9 @@ const styles = StyleSheet.create({
   },
   typingBubble: {
     backgroundColor: COLORS.BACKGROUND.TYPING,
+    paddingVertical: 12,
+    minHeight: 'auto',
+    maxWidth: '70%',
   },
   messageText: {
     fontSize: 16,
@@ -176,6 +185,7 @@ const styles = StyleSheet.create({
   typingText: {
     color: COLORS.TEXT.SECONDARY,
     fontStyle: 'italic',
+    fontSize: 14,
   },
   timestamp: {
     fontSize: 12,

@@ -24,6 +24,7 @@ export const COLORS = {
     TERTIARY: '#999999',
     WHITE: '#FFFFFF',
     DARK: '#333333',
+    LIGHT: '#f8f8f2',
   },
   SHADOW: {
     LIGHT: 'rgba(0, 0, 0, 0.1)',
