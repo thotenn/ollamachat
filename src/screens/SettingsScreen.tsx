@@ -349,14 +349,16 @@ const SettingsScreen: React.FC = () => {
                     await updateSettings({ selectedModel: model.name });
                   }}
                 >
-                  <Text
-                    style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
-                      color: selectedModel === model.name ? COLORS.PRIMARY : COLORS.TEXT.DARK,
-                      fontWeight: selectedModel === model.name ? '600' : 'normal',
-                    })}
-                  >
-                    {model.displayName || model.name}
-                  </Text>
+                  <View style={COMMON_STYLES.itemMain}>
+                    <Text
+                      style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                        color: selectedModel === model.name ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                        fontWeight: selectedModel === model.name ? '600' : 'normal',
+                      })}
+                    >
+                      {model.displayName || model.name}
+                    </Text>
+                  </View>
                   {selectedModel === model.name && (
                     <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                   )}
