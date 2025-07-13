@@ -111,7 +111,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
           multiline
           maxLength={1000}
           onSubmitEditing={handleSend}
-          blurOnSubmit={false}
+          submitBehavior="newline"
           editable={!disabled}
         />
         <TouchableOpacity
