@@ -40,16 +40,9 @@ yarn-error.*
 build/
 ios/
 
-# Android (ignore directory but keep specific files)
-android/
-!android/app/src/main/res/xml/network_security_config.xml
-!android/app/src/main/AndroidManifest.xml
-!android/gradlew
-!android/gradlew.bat
-!android/gradle/
-!android/gradle/wrapper/
-!android/gradle/wrapper/*
-!android/build.gradle
-!android/settings.gradle
-!android/gradle.properties
-!android/app/build.gradle
+# Android build files
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+*.iml
