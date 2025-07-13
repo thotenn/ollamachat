@@ -429,4 +429,34 @@ npx expo run:android
 cd android
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleRelease
 adb install app/build/outputs/apk/release/app-release.apk
+
+notes:
+for Production build aab, update eas.json:
+```json
+{
+  "build": {
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}
+```
+but, if you want to build an APK, update eas.json to:
+```json
+{
+  "build": {
+    "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+```
+Then run:
+```bash
+eas build:configure
+eas build --platform android --profile production
 ```
