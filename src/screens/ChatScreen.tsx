@@ -32,16 +32,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   const [messageCount, setMessageCount] = useState(0);
   const [assistantModalVisible, setAssistantModalVisible] = useState(false);
 
-  useEffect(() => {
-    const initDatabase = async () => {
-      try {
-        await databaseService.initDatabase();
-      } catch (error) {
-        console.error('Error initializing database:', error);
-      }
-    };
-    initDatabase();
-  }, []);
+  // Database is initialized in SettingsContext, no need to do it here
 
   useEffect(() => {
     if (conversationId && conversationId !== currentConversationId) {

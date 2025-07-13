@@ -2,10 +2,10 @@ import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { DatabaseAdapter } from './databaseAdapter';
 import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
-import webDatabaseService from './webDatabaseService.web';
 
 class NativeDatabaseService implements DatabaseAdapter {
   private db: SQLite.SQLiteDatabase | null = null;
+  private pendingMigrationData: any[] | null = null;
 
   async initDatabase(): Promise<void> {
     try {
@@ -17,6 +17,8 @@ class NativeDatabaseService implements DatabaseAdapter {
       console.log('Initializing native database...');
       this.db = await SQLite.openDatabaseAsync('ollamachat.db');
       console.log('Native database opened successfully');
+      
+      // Create tables if they don't exist
       await this.createTables();
       console.log('Native tables created successfully');
     } catch (error) {
@@ -26,8 +28,53 @@ class NativeDatabaseService implements DatabaseAdapter {
     }
   }
 
+  private async migrateDatabase(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Check if conversations table exists and has the old schema
+      const tableInfo = await this.db.getAllAsync(
+        "PRAGMA table_info(conversations)"
+      ) as any[];
+
+      if (tableInfo.length > 0) {
+        // Check if provider_id column exists
+        const hasProviderId = tableInfo.some((col: any) => col.name === 'provider_id');
+        
+        if (!hasProviderId) {
+          console.log('Migrating database: Adding provider_id and assistant_id columns');
+          
+          // Get existing conversations data
+          const existingConversations = await this.db.getAllAsync(
+            'SELECT * FROM conversations'
+          ) as any[];
+          
+          console.log(`Found ${existingConversations.length} conversations to migrate`);
+          
+          // Drop old tables
+          await this.db.execAsync(`
+            DROP TABLE IF EXISTS messages;
+            DROP TABLE IF EXISTS conversations;
+          `);
+
+          console.log('Old tables dropped, creating new schema...');
+          
+          // Tables will be recreated with new schema by createTables
+          // After tables are created, restore data
+          this.pendingMigrationData = existingConversations;
+        }
+      }
+    } catch (error) {
+      console.error('Error during migration check:', error);
+      // Continue with table creation
+    }
+  }
+
   private async createTables(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
+
+    // Check if we need to migrate the database
+    await this.migrateDatabase();
 
     await this.db.execAsync(`
       CREATE TABLE IF NOT EXISTS providers (
@@ -87,6 +134,11 @@ class NativeDatabaseService implements DatabaseAdapter {
     `);
 
     await this.initializeDefaultData();
+    
+    // If we have pending migration data, restore it
+    if (this.pendingMigrationData && this.pendingMigrationData.length > 0) {
+      await this.restoreMigratedData();
+    }
   }
 
   private getProviderBaseUrl(type: string): string {
@@ -110,9 +162,10 @@ class NativeDatabaseService implements DatabaseAdapter {
   private async initializeDefaultData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const now = new Date().toISOString();
+    try {
+      const now = new Date().toISOString();
 
-    // Check if we already have providers
+      // Check if we already have providers
     const existingProviders = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM providers') as any;
     
     if (existingProviders.count === 0) {
@@ -149,10 +202,14 @@ class NativeDatabaseService implements DatabaseAdapter {
       ];
 
       for (const provider of defaultProviders) {
-        await this.db.runAsync(
-          'INSERT INTO providers (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
-        );
+        try {
+          await this.db.runAsync(
+            'INSERT OR IGNORE INTO providers (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
+          );
+        } catch (insertError) {
+          console.log(`Provider ${provider.name} already exists, skipping`);
+        }
       }
     }
 
@@ -169,10 +226,18 @@ class NativeDatabaseService implements DatabaseAdapter {
         isDefault: true,
       };
 
-      await this.db.runAsync(
-        'INSERT INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [defaultAssistant.id, defaultAssistant.name, defaultAssistant.description, defaultAssistant.instructions, 1, now, now]
-      );
+      try {
+        await this.db.runAsync(
+          'INSERT OR IGNORE INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [defaultAssistant.id, defaultAssistant.name, defaultAssistant.description, defaultAssistant.instructions, 1, now, now]
+        );
+      } catch (insertError) {
+        console.log('Default assistant already exists, skipping');
+      }
+    }
+    } catch (error) {
+      console.error('Error in initializeDefaultData:', error);
+      // Don't throw error, just log it - the database is still usable
     }
   }
 
@@ -509,6 +574,49 @@ class NativeDatabaseService implements DatabaseAdapter {
 
     await this.db.runAsync('DELETE FROM assistants WHERE id = ?', [id]);
   }
+
+  private async restoreMigratedData(): Promise<void> {
+    if (!this.db || !this.pendingMigrationData) return;
+
+    console.log('Restoring migrated conversations...');
+    
+    try {
+      // Get default provider and assistant
+      const defaultProvider = await this.db.getFirstAsync(
+        'SELECT id FROM providers WHERE is_default = 1'
+      ) as any;
+      
+      const defaultAssistant = await this.db.getFirstAsync(
+        'SELECT id FROM assistants WHERE is_default = 1'
+      ) as any;
+      
+      const providerId = defaultProvider?.id || 'ollama-default';
+      const assistantId = defaultAssistant?.id || 'default-assistant';
+      
+      // Restore each conversation with new fields
+      for (const conv of this.pendingMigrationData) {
+        await this.db.runAsync(
+          'INSERT INTO conversations (id, title, created_at, updated_at, model, provider_id, assistant_id, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            conv.id,
+            conv.title,
+            conv.created_at,
+            conv.updated_at,
+            conv.model,
+            providerId, // Use default provider
+            assistantId, // Use default assistant
+            conv.context || null
+          ]
+        );
+      }
+      
+      console.log(`Restored ${this.pendingMigrationData.length} conversations`);
+      this.pendingMigrationData = null;
+    } catch (error) {
+      console.error('Error restoring migrated data:', error);
+      this.pendingMigrationData = null;
+    }
+  }
 }
 
 // Platform-specific database service factory
@@ -519,7 +627,9 @@ class DatabaseServiceFactory {
     if (!this.instance) {
       if (Platform.OS === 'web') {
         console.log('Using WebDatabaseService for web platform');
-        this.instance = webDatabaseService;
+        // Use the stub service which will be replaced by the real one on web
+        const WebDatabaseService = require('./webDatabaseService').default;
+        this.instance = WebDatabaseService;
       } else {
         console.log('Using NativeDatabaseService for native platform');
         this.instance = new NativeDatabaseService();
@@ -533,4 +643,5 @@ class DatabaseServiceFactory {
   }
 }
 
+// Export singleton instance
 export default DatabaseServiceFactory.getInstance();
