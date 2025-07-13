@@ -26,6 +26,7 @@ interface CustomChatProps {
   onSendMessage: (text: string) => void;
   isTyping?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 const CustomChat: React.FC<CustomChatProps> = ({
@@ -33,6 +34,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
   onSendMessage,
   isTyping = false,
   placeholder = "Escribe un mensaje...",
+  disabled = false,
 }) => {
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -82,6 +84,12 @@ const CustomChat: React.FC<CustomChatProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      {disabled && (
+        <View style={styles.warningContainer}>
+          <Ionicons name="warning-outline" size={16} color={COLORS.TEXT.SECONDARY} />
+          <Text style={styles.warningText}>No conectado al proveedor de IA. Conéctate para enviar mensajes.</Text>
+        </View>
+      )}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -96,24 +104,25 @@ const CustomChat: React.FC<CustomChatProps> = ({
       
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, disabled && styles.textInputDisabled]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={placeholder}
+          placeholder={disabled ? "Conecta con un proveedor de IA para enviar mensajes" : placeholder}
           multiline
           maxLength={1000}
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
+          editable={!disabled}
         />
         <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+          style={[styles.sendButton, (!inputText.trim() || disabled) && styles.sendButtonDisabled]}
           onPress={handleSend}
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || disabled}
         >
           <Ionicons 
             name="send" 
             size={20} 
-            color={inputText.trim() ? COLORS.PRIMARY : COLORS.BORDER.LIGHT} 
+            color={(inputText.trim() && !disabled) ? COLORS.PRIMARY : COLORS.BORDER.LIGHT} 
           />
         </TouchableOpacity>
       </View>
@@ -125,6 +134,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.BORDER.DEFAULT,
+  },
+  warningText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.TEXT.SECONDARY,
+    flex: 1,
   },
   messagesList: {
     flex: 1,
@@ -216,6 +240,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     maxHeight: 100,
     backgroundColor: COLORS.BACKGROUND.LIGHT,
+  },
+  textInputDisabled: {
+    backgroundColor: COLORS.BACKGROUND.LIGHTER,
+    color: COLORS.TEXT.TERTIARY,
+    opacity: 0.7,
   },
   sendButton: {
     marginLeft: 12,

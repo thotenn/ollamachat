@@ -72,12 +72,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const startNewConversation = () => {
     const assistantName = currentAssistant?.name || 'Asistente';
-    const providerName = currentProvider?.name || 'IA';
+    
+    let welcomeMessage = `¡Hola! Soy ${assistantName}.`;
+    
+    if (isConnected && currentProvider && settings.selectedModel) {
+      welcomeMessage += ` Estoy usando ${currentProvider.name} con el modelo ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`;
+    } else {
+      welcomeMessage += ` Conecta con un proveedor de IA para comenzar a chatear.`;
+    }
     
     setMessages([
       {
         id: '1',
-        text: `¡Hola! Soy ${assistantName} usando ${providerName} con el modelo ${settings.selectedModel}. ¿En qué puedo ayudarte hoy?`,
+        text: welcomeMessage,
         timestamp: new Date(),
         isUser: false,
       },
@@ -391,20 +398,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           </View>
         </View>
       </View>
-      {!isConnected ? (
-        <View style={COMMON_STYLES.emptyContainer}>
-          <Ionicons name="warning-outline" size={48} color={COLORS.TEXT.SECONDARY} />
-          <Text style={createTextStyle(TYPOGRAPHY.BODY_LARGE, { color: COLORS.TEXT.SECONDARY, marginTop: 16 })}>No conectado al proveedor de IA</Text>
-          <Text style={createTextStyle(TYPOGRAPHY.BODY_MEDIUM, { color: COLORS.TEXT.TERTIARY, marginTop: 8 })}>Verifica la configuración</Text>
-        </View>
-      ) : (
-        <CustomChat
-          messages={messages}
-          onSendMessage={handleSendMessage}
-          isTyping={isTyping}
-          placeholder="Escribe un mensaje..."
-        />
-      )}
+      <CustomChat
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        isTyping={isTyping}
+        placeholder="Escribe un mensaje..."
+        disabled={!isConnected}
+      />
 
       {/* Assistant Selection Modal */}
       <Modal
