@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { DatabaseAdapter } from './databaseAdapter';
-import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant, AppSettings } from '../types';
 import { ProviderType } from '../envs/providers';
 import { DATABASE, URLS, DEFAULTS, PROVIDERS } from '../envs';
 
@@ -86,6 +86,17 @@ class NativeDatabaseService implements DatabaseAdapter {
         description TEXT NOT NULL,
         instructions TEXT NOT NULL,
         is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.SETTINGS} (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        selected_provider_id TEXT NOT NULL,
+        selected_model TEXT NOT NULL,
+        selected_assistant_id TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -592,6 +603,55 @@ class NativeDatabaseService implements DatabaseAdapter {
       this.pendingMigrationData = null;
     } catch (error) {
       this.pendingMigrationData = null;
+    }
+  }
+
+  async getSettings(): Promise<AppSettings | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = await this.db.getFirstAsync(
+        `SELECT * FROM ${DATABASE.TABLES.SETTINGS} WHERE id = 'default'`
+      ) as any;
+
+      if (!result) {
+        return null;
+      }
+
+      return {
+        selectedProviderId: result.selected_provider_id,
+        selectedModel: result.selected_model,
+        selectedAssistantId: result.selected_assistant_id,
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = new Date().toISOString();
+
+    try {
+      // Try to update existing settings first
+      const existing = await this.db.getFirstAsync(
+        `SELECT id FROM ${DATABASE.TABLES.SETTINGS} WHERE id = 'default'`
+      ) as any;
+
+      if (existing) {
+        await this.db.runAsync(
+          `UPDATE ${DATABASE.TABLES.SETTINGS} SET selected_provider_id = ?, selected_model = ?, selected_assistant_id = ?, updated_at = ? WHERE id = 'default'`,
+          [settings.selectedProviderId, settings.selectedModel, settings.selectedAssistantId, now]
+        );
+      } else {
+        await this.db.runAsync(
+          `INSERT INTO ${DATABASE.TABLES.SETTINGS} (id, selected_provider_id, selected_model, selected_assistant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          ['default', settings.selectedProviderId, settings.selectedModel, settings.selectedAssistantId, now, now]
+        );
+      }
+    } catch (error) {
+      throw error;
     }
   }
 }

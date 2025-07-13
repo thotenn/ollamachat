@@ -37,6 +37,36 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [currentProvider, setCurrentProvider] = useState<Provider | null>(null);
   const [currentAssistant, setCurrentAssistant] = useState<Assistant | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  const initializeApp = async () => {
+    try {
+      // Initialize database first
+      await databaseService.initDatabase();
+      
+      // Load providers and assistants (this will trigger loadSettings via useEffect)
+      await refreshProviders();
+      await refreshAssistants();
+    } catch (error) {
+      console.error('Error initializing app:', error);
+    }
+  };
+
+  const checkConnection = async () => {
+    if (!currentProvider) {
+      console.log('No current provider, setting disconnected');
+      setIsConnected(false);
+      return;
+    }
+    
+    try {
+      const connected = await providerService.checkConnection(currentProvider.id);
+      setIsConnected(connected);
+    } catch (error) {
+      console.error('Error checking connection:', error);
+      setIsConnected(false);
+    }
+  };
 
   useEffect(() => {
     initializeApp();
@@ -49,43 +79,66 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [currentProvider]);
 
-
-  const initializeApp = async () => {
-    try {
-      // Initialize database first
-      await databaseService.initDatabase();
-      
-      // Load providers and assistants
-      await refreshProviders();
-      await refreshAssistants();
-      
-      // Load settings
-      await loadSettings();
-    } catch (error) {
-          }
-  };
+  // Load settings when providers and assistants are loaded
+  useEffect(() => {
+    if (providers.length > 0 && assistants.length > 0 && !settingsLoaded) {
+      console.log('Providers and assistants loaded, loading settings...');
+      console.log('Providers:', providers.map(p => `${p.id}: ${p.name}`));
+      console.log('Assistants:', assistants.map(a => `${a.id}: ${a.name}`));
+      loadSettings();
+    }
+  }, [providers, assistants, settingsLoaded]);
 
   const loadSettings = async () => {
     try {
-      const storedSettings = await AsyncStorage.getItem(SETTINGS_KEY);
-      if (storedSettings) {
-        const parsed = JSON.parse(storedSettings);
-        setSettings(parsed);
+      // First try to load from database
+      let loadedSettings: AppSettings | null = null;
+      
+      try {
+        loadedSettings = await databaseService.getSettings();
+        console.log('Settings loaded from database:', loadedSettings);
+      } catch (dbError) {
+        console.warn('Failed to load settings from database:', dbError);
+      }
+      
+      // If no settings in database, try AsyncStorage as fallback
+      if (!loadedSettings) {
+        const storedSettings = await AsyncStorage.getItem(SETTINGS_KEY);
+        if (storedSettings) {
+          loadedSettings = JSON.parse(storedSettings);
+          console.log('Settings loaded from AsyncStorage:', loadedSettings);
+          
+          // Save to database for future use
+          if (loadedSettings) {
+            try {
+              await databaseService.saveSettings(loadedSettings);
+              console.log('Settings migrated to database');
+            } catch (error) {
+              console.warn('Failed to migrate settings to database:', error);
+            }
+          }
+        }
+      }
+      
+      if (loadedSettings) {
+        setSettings(loadedSettings);
         
         // Set current provider and assistant
-        const provider = providers.find(p => p.id === parsed.selectedProviderId);
-        const assistant = assistants.find(a => a.id === parsed.selectedAssistantId);
+        const provider = providers.find(p => p.id === loadedSettings.selectedProviderId);
+        const assistant = assistants.find(a => a.id === loadedSettings.selectedAssistantId);
         
         if (provider) {
-                    setCurrentProvider(provider);
+          console.log(`Setting current provider from loaded settings: ${provider.name}`);
+          setCurrentProvider(provider);
           providerService.setProvider(provider);
         } else {
-                  }
+          console.warn(`Provider not found in loaded settings: ${loadedSettings.selectedProviderId}`);
+        }
         if (assistant) {
           setCurrentAssistant(assistant);
         }
       } else {
-        // Use defaults if no settings found
+        // Use defaults if no settings found anywhere
         const defaultProvider = providers.find(p => p.isDefault);
         const defaultAssistant = assistants.find(a => a.isDefault);
         
@@ -95,11 +148,17 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             selectedModel: MODELS.OLLAMA.DEFAULT,
             selectedAssistantId: defaultAssistant.id,
           };
+          console.log('Using default settings:', defaultSettings);
           await updateSettings(defaultSettings);
         }
       }
+      
+      // Mark settings as loaded
+      setSettingsLoaded(true);
     } catch (error) {
-          }
+      console.error('Error loading settings:', error);
+      setSettingsLoaded(true); // Mark as loaded even on error to prevent infinite loops
+    }
   };
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
@@ -108,20 +167,31 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       const updated = { ...settings, ...newSettings };
       setSettings(updated);
       
-      // Then save to AsyncStorage (non-blocking)
-      AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated)).catch(error => {
-              });
+      // Save to both AsyncStorage and Database in parallel
+      const savePromises = [
+        AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated)).catch(error => {
+          console.warn('Failed to save settings to AsyncStorage:', error);
+        }),
+        databaseService.saveSettings(updated).catch(error => {
+          console.warn('Failed to save settings to database:', error);
+        })
+      ];
+      
+      await Promise.all(savePromises);
       
       // Update current provider and assistant if changed
       if (newSettings.selectedProviderId !== undefined) {
-                
+        console.log(`Provider changed to: ${newSettings.selectedProviderId}`);
+        
         const provider = providers.find(p => p.id === newSettings.selectedProviderId);
         if (provider) {
-                    setCurrentProvider(provider);
+          console.log(`Setting current provider: ${provider.name}`);
+          setCurrentProvider(provider);
           // Also update provider service immediately
           providerService.setProvider(provider);
         } else {
-                  }
+          console.warn(`Provider not found: ${newSettings.selectedProviderId}`);
+        }
       }
       
       if (newSettings.selectedAssistantId !== undefined) {
@@ -131,17 +201,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-          }
-  };
-
-  const checkConnection = async () => {
-    if (!currentProvider) {
-            setIsConnected(false);
-      return;
+      console.error('Error updating settings:', error);
     }
-    
-    const connected = await providerService.checkConnection(currentProvider.id);
-    setIsConnected(connected);
   };
 
   const refreshProviders = async () => {

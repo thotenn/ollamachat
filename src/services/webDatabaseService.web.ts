@@ -1,6 +1,6 @@
 import initSqlJs, { Database } from 'sql.js';
 import { DatabaseAdapter, DatabaseRow } from './databaseAdapter';
-import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant, AppSettings } from '../types';
 import { ProviderType } from '../envs/providers';
 import { URLS, DATABASE, STORAGE_KEYS, DEFAULTS, PROVIDERS } from '@env';
 
@@ -57,6 +57,17 @@ class WebDatabaseService implements DatabaseAdapter {
         description TEXT NOT NULL,
         instructions TEXT NOT NULL,
         is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.SETTINGS} (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        selected_provider_id TEXT NOT NULL,
+        selected_model TEXT NOT NULL,
+        selected_assistant_id TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -635,6 +646,66 @@ class WebDatabaseService implements DatabaseAdapter {
 
     this.db.run(`DELETE FROM ${DATABASE.TABLES.ASSISTANTS} WHERE id = ?`, [id]);
     await this.saveToIndexedDB();
+  }
+
+  async getSettings(): Promise<AppSettings | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const result = this.db.exec(
+        `SELECT * FROM ${DATABASE.TABLES.SETTINGS} WHERE id = 'default'`
+      );
+
+      if (!result[0] || !result[0].values[0]) {
+        return null;
+      }
+
+      const row = result[0].values[0];
+      const columns = result[0].columns;
+
+      // Map the row values to column names
+      const settings: any = {};
+      columns.forEach((col, index) => {
+        settings[col] = row[index];
+      });
+
+      return {
+        selectedProviderId: settings.selected_provider_id,
+        selectedModel: settings.selected_model,
+        selectedAssistantId: settings.selected_assistant_id,
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const now = new Date().toISOString();
+
+    try {
+      // Try to update existing settings first
+      const existing = this.db.exec(
+        `SELECT id FROM ${DATABASE.TABLES.SETTINGS} WHERE id = 'default'`
+      );
+
+      if (existing[0] && existing[0].values.length > 0) {
+        this.db.run(
+          `UPDATE ${DATABASE.TABLES.SETTINGS} SET selected_provider_id = ?, selected_model = ?, selected_assistant_id = ?, updated_at = ? WHERE id = 'default'`,
+          [settings.selectedProviderId, settings.selectedModel, settings.selectedAssistantId, now]
+        );
+      } else {
+        this.db.run(
+          `INSERT INTO ${DATABASE.TABLES.SETTINGS} (id, selected_provider_id, selected_model, selected_assistant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          ['default', settings.selectedProviderId, settings.selectedModel, settings.selectedAssistantId, now, now]
+        );
+      }
+
+      await this.saveToIndexedDB();
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
+import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant, AppSettings } from '../types';
 
 export interface DatabaseAdapter {
   initDatabase(): Promise<void>;
@@ -22,6 +22,10 @@ export interface DatabaseAdapter {
   createAssistant(assistant: Omit<Assistant, 'id' | 'createdAt' | 'updatedAt'>): Promise<string>;
   updateAssistant(id: string, updates: Partial<Assistant>): Promise<void>;
   deleteAssistant(id: string): Promise<void>;
+  
+  // Settings methods
+  getSettings(): Promise<AppSettings | null>;
+  saveSettings(settings: AppSettings): Promise<void>;
 }
 
 export interface DatabaseRow {

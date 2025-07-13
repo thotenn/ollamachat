@@ -126,12 +126,19 @@ const SettingsScreen: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save the complete current settings including provider, model, and assistant
       await updateSettings({
+        selectedProviderId: settings.selectedProviderId,
         selectedModel,
+        selectedAssistantId: settings.selectedAssistantId,
       });
-      Alert.alert('Éxito', 'Configuración guardada correctamente');
+      Alert.alert(
+        'Configuración Guardada', 
+        `Proveedor: ${currentProvider?.name || 'N/A'}\nModelo: ${selectedModel || 'N/A'}\nAsistente: ${currentAssistant?.name || 'N/A'}\n\nLa configuración se ha guardado y se restaurará al reiniciar la aplicación.`
+      );
     } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar la configuración');
+      console.error('Error saving settings:', error);
+      Alert.alert('Error', 'No se pudo guardar la configuración. Por favor, inténtalo de nuevo.');
     } finally {
       setIsSaving(false);
     }
@@ -139,6 +146,7 @@ const SettingsScreen: React.FC = () => {
 
   const handleProviderChange = async (providerId: string) => {
     try {
+      console.log(`Changing provider to: ${providerId}`);
       
       // Prevent multiple rapid clicks
       if (settings.selectedProviderId === providerId || isChangingProvider) {
@@ -157,12 +165,14 @@ const SettingsScreen: React.FC = () => {
         selectedModel: ''
       });
       
+      console.log(`Provider successfully changed to: ${providerId}`);
       
       // Small delay to ensure state propagation
       setTimeout(() => {
         setIsChangingProvider(false);
       }, 500);
     } catch (error) {
+      console.error('Error changing provider:', error);
       setIsChangingProvider(false);
     }
   };
@@ -263,6 +273,13 @@ const SettingsScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <CorsWarning />
+
+        {/* Settings Description */}
+        <View style={[COMMON_STYLES.section, { paddingBottom: 8 }]}>
+          <Text style={[TYPOGRAPHY.SECTION_SUBTITLE, { textAlign: 'center', fontStyle: 'italic' }]}>
+            Los cambios se aplican inmediatamente. Use "Persistir Configuración" para guardar permanentemente la configuración actual.
+          </Text>
+        </View>
 
         {/* Providers Section */}
         <View style={COMMON_STYLES.section}>
@@ -418,7 +435,7 @@ const SettingsScreen: React.FC = () => {
           {isSaving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={TYPOGRAPHY.BUTTON_PRIMARY}>Guardar Configuración</Text>
+            <Text style={TYPOGRAPHY.BUTTON_PRIMARY}>Persistir Configuración</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

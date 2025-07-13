@@ -14,6 +14,7 @@ export const DATABASE = {
     ASSISTANTS: 'assistants',
     CONVERSATIONS: 'conversations',
     MESSAGES: 'messages',
+    SETTINGS: 'settings',
     DATABASE: 'database',
   },
 } as const;
