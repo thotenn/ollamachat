@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
 import AssistantModal from '../components/AssistantModal';
+import FloatingProvider from '../components/FloatingProvider';
 import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -369,15 +370,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       <View style={COMMON_STYLES.header}>
         <View style={COMMON_STYLES.headerLeft}>
           <Text style={TYPOGRAPHY.HEADER_TITLE}>AI Chat</Text>
+        </View>
+        <View style={COMMON_STYLES.headerRight}>
           <TouchableOpacity 
             style={styles.assistantSelector}
             onPress={() => setAssistantModalVisible(true)}
           >
-            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { marginTop: 0, marginRight: 4 })}>{currentAssistant?.name || 'Asistente'}</Text>
             <Ionicons name="chevron-down" size={16} color={COLORS.TEXT.SECONDARY} />
+            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { marginTop: 0, marginRight: 4 })}>{currentAssistant?.name || 'Asistente'}</Text>
           </TouchableOpacity>
-        </View>
-        <View style={COMMON_STYLES.headerRight}>
           <TouchableOpacity 
             style={styles.newChatButton}
             onPress={handleClearConversation}
@@ -388,17 +389,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           >
             <Ionicons name="add-circle-outline" size={24} color={COLORS.PRIMARY} />
           </TouchableOpacity>
-          <View style={COMMON_STYLES.statusContainer}>
-            <View style={[COMMON_STYLES.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
-            <Text style={TYPOGRAPHY.STATUS_TEXT}>{currentProvider?.name || 'No provider'}</Text>
-            {context && (
-              <View style={styles.contextIndicator}>
-                <Ionicons name="link" size={12} color={COLORS.PRIMARY} />
-              </View>
-            )}
-          </View>
         </View>
       </View>
+
+      {/* Floating Status Component */}
+      <FloatingProvider
+        isConnected={isConnected}
+        providerName={currentProvider?.name}
+        hasContext={!!context}
+      />
+
       <CustomChat
         messages={messages}
         onSendMessage={handleSendMessage}
@@ -435,10 +435,6 @@ const styles = StyleSheet.create({
       cursor: 'pointer',
       userSelect: 'none',
     }),
-  },
-  contextIndicator: {
-    marginLeft: 8,
-    padding: 2,
   },
 });
 
