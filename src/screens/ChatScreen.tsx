@@ -366,7 +366,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={COMMON_STYLES.screenContainer}>
+    <SafeAreaView 
+      style={[COMMON_STYLES.screenContainer, Platform.OS === 'android' && styles.androidContainer]}
+      edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : ['top', 'bottom']}
+    >
       <View style={COMMON_STYLES.header}>
         <View style={COMMON_STYLES.headerLeft}>
           <Text style={TYPOGRAPHY.HEADER_TITLE}>AI Chat</Text>
@@ -420,6 +423,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  androidContainer: {
+    // For Android: avoid bottom padding but maintain proper layout
+    ...(Platform.OS === 'android' && {
+      flex: 1,
+      backgroundColor: COLORS.BACKGROUND.LIGHTER,
+      paddingBottom: 0,
+    }),
+  },
   assistantSelector: {
     flexDirection: 'row',
     alignItems: 'center',

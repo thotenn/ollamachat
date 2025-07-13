@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MessageRenderer from './MessageRenderer';
@@ -38,12 +39,46 @@ const CustomChat: React.FC<CustomChatProps> = ({
   disabled = false,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+        setKeyboardVisible(true);
+        // Ensure the list is scrolled to show the latest messages
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }, 150);
+      });
+      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardVisible(false);
+      });
+
+      return () => {
+        keyboardDidShowListener?.remove();
+        keyboardDidHideListener?.remove();
+      };
+    }
+  }, []);
 
   const handleSend = () => {
     if (inputText.trim()) {
       onSendMessage(inputText.trim());
       setInputText('');
+      // Scroll to top after sending message
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
+    }
+  };
+
+  const handleInputFocus = () => {
+    if (Platform.OS === 'android') {
+      // On Android, scroll to top when input is focused
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 300);
     }
   };
 
@@ -87,7 +122,11 @@ const CustomChat: React.FC<CustomChatProps> = ({
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[
+        styles.container, 
+        Platform.OS === 'android' && styles.androidContainer,
+        Platform.OS === 'android' && keyboardVisible && styles.androidKeyboardVisible
+      ]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
@@ -120,6 +159,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
           onSubmitEditing={handleSend}
           submitBehavior="newline"
           editable={!disabled}
+          onFocus={handleInputFocus}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || disabled) && styles.sendButtonDisabled]}
@@ -142,6 +182,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
+  androidContainer: {
+    // For Android, ensure proper keyboard handling without extra space
+    ...(Platform.OS === 'android' && {
+      paddingBottom: 0,
+      marginBottom: 0,
+    }),
+  },
+  androidKeyboardVisible: {
+    // When keyboard is visible on Android, ensure proper positioning
+    ...(Platform.OS === 'android' && {
+      paddingBottom: 0,
+      marginBottom: 0,
+    }),
+  },
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -160,6 +214,10 @@ const styles = StyleSheet.create({
   messagesList: {
     flex: 1,
     paddingHorizontal: 16,
+    ...(Platform.OS === 'android' && {
+      // Ensure proper behavior on Android
+      flexShrink: 1,
+    }),
   },
   messagesContent: {
     paddingTop: 16,
