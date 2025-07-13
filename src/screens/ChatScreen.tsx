@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, Modal, ScrollView } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
+import AssistantModal from '../components/AssistantModal';
 import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -407,51 +408,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       />
 
       {/* Assistant Selection Modal */}
-      <Modal
+      <AssistantModal
         visible={assistantModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        transparent={false}
-      >
-        <SafeAreaView style={COMMON_STYLES.modalContainer}>
-          <View style={COMMON_STYLES.modalHeader}>
-            <TouchableOpacity onPress={() => setAssistantModalVisible(false)}>
-              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.TEXT.SECONDARY })}>Cancelar</Text>
-            </TouchableOpacity>
-            <Text style={TYPOGRAPHY.MODAL_TITLE}>Seleccionar Asistente</Text>
-            <View style={styles.modalPlaceholder} />
-          </View>
-          
-          <ScrollView style={COMMON_STYLES.modalContent}>
-            {assistants.map((assistant) => (
-              <TouchableOpacity
-                key={assistant.id}
-                style={[
-                  COMMON_STYLES.selectableItem,
-                  settings.selectedAssistantId === assistant.id && COMMON_STYLES.selectableItemSelected,
-                ]}
-                onPress={() => handleAssistantChange(assistant.id)}
-              >
-                <View style={COMMON_STYLES.itemMain}>
-                  <Text
-                    style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
-                      color: settings.selectedAssistantId === assistant.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
-                      fontWeight: settings.selectedAssistantId === assistant.id ? '600' : 'normal',
-                      marginBottom: 4,
-                    })}
-                  >
-                    {assistant.name}
-                  </Text>
-                  <Text style={TYPOGRAPHY.BODY_MEDIUM}>{assistant.description}</Text>
-                </View>
-                {settings.selectedAssistantId === assistant.id && (
-                  <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+        assistants={assistants}
+        selectedAssistantId={settings.selectedAssistantId}
+        onClose={() => setAssistantModalVisible(false)}
+        onAssistantChange={handleAssistantChange}
+      />
     </SafeAreaView>
   );
 };
@@ -476,9 +439,6 @@ const styles = StyleSheet.create({
   contextIndicator: {
     marginLeft: 8,
     padding: 2,
-  },
-  modalPlaceholder: {
-    width: 60,
   },
 });
 

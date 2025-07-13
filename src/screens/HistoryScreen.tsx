@@ -173,7 +173,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         </View>
         <View style={COMMON_STYLES.headerRight}>
           <View style={COMMON_STYLES.badge}>
-            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { color: COLORS.PRIMARY, marginLeft: 4, fontWeight: '500' })}>{conversations.length}</Text>
+            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { color: COLORS.PRIMARY, fontWeight: '500' })}>{conversations.length}</Text>
           </View>
         </View>
       </View>
