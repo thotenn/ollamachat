@@ -112,7 +112,13 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
     >
       <View style={COMMON_STYLES.listItemContent}>
         <View style={styles.conversationHeader}>
-          <Text style={createTextStyle(TYPOGRAPHY.BODY_LARGE, { fontWeight: '600', lineHeight: 22, marginRight: 12 })} numberOfLines={2}>
+          <Text 
+            style={[
+              createTextStyle(TYPOGRAPHY.BODY_LARGE, { fontWeight: '600', lineHeight: 22 }),
+              styles.conversationTitle
+            ]} 
+            numberOfLines={2}
+          >
             {item.title}
           </Text>
           <TouchableOpacity
@@ -192,6 +198,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  conversationTitle: {
+    flex: 1,
+    marginRight: 12,
   },
   conversationFooter: {
     flexDirection: 'row',
