@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { OllamaResponse, OllamaGenerateRequest, OllamaModel, Provider } from '../types';
-import { URLS, MODELS, PROVIDERS, DEFAULTS } from '../envs';
+import { URLS, MODELS, PROVIDERS, DEFAULTS, MODEL_LISTS } from '../envs';
 
 export interface GenerateRequest {
   model: string;
@@ -462,11 +462,10 @@ class OpenAIProviderService extends BaseProviderService {
           displayName: model.id,
         }));
     } catch (error) {
-      return [
-        { name: MODELS.OPENAI.GPT_3_5_TURBO, displayName: 'GPT-3.5 Turbo' },
-        { name: MODELS.OPENAI.GPT_4, displayName: 'GPT-4' },
-        { name: MODELS.OPENAI.GPT_4_TURBO, displayName: 'GPT-4 Turbo' },
-      ];
+      return MODEL_LISTS.OPENAI.map(model => ({
+        name: model.id,
+        displayName: model.name
+      }));
     }
   }
 
