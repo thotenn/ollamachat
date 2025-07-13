@@ -47,25 +47,31 @@ const CustomChat: React.FC<CustomChatProps> = ({
     }
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => (
-    <View style={[
-      styles.messageContainer,
-      item.isUser ? styles.userMessage : styles.botMessage
-    ]}>
+  const renderMessage = ({ item }: { item: ChatMessage }) => {
+    if (!item.text.trim() || item.pending) {
+      return null;
+    }
+    
+    return (
       <View style={[
-        styles.messageBubble,
-        item.isUser ? styles.userBubble : styles.botBubble
+        styles.messageContainer,
+        item.isUser ? styles.userMessage : styles.botMessage
       ]}>
-        <MessageRenderer text={item.text} isUser={item.isUser} />
-        <Text style={[
-          styles.timestamp,
-          item.isUser ? styles.userTimestamp : styles.botTimestamp
+        <View style={[
+          styles.messageBubble,
+          item.isUser ? styles.userBubble : styles.botBubble
         ]}>
-          {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+          <MessageRenderer text={item.text} isUser={item.isUser} />
+          <Text style={[
+            styles.timestamp,
+            item.isUser ? styles.userTimestamp : styles.botTimestamp
+          ]}>
+            {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderTypingIndicator = () => {
     if (!isTyping) return null;
