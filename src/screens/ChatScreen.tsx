@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
@@ -35,8 +35,27 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>(conversationId);
   const [messageCount, setMessageCount] = useState(0);
   const [assistantModalVisible, setAssistantModalVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // Database is initialized in SettingsContext, no need to do it here
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const keyboardDidShowListener = Keyboard.addListener(
+        'keyboardDidShow',
+        () => setKeyboardVisible(true)
+      );
+      const keyboardDidHideListener = Keyboard.addListener(
+        'keyboardDidHide',
+        () => setKeyboardVisible(false)
+      );
+
+      return () => {
+        keyboardDidShowListener.remove();
+        keyboardDidHideListener.remove();
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (conversationId && conversationId !== currentConversationId) {
@@ -368,7 +387,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   return (
     <SafeAreaView 
       style={[COMMON_STYLES.screenContainer, Platform.OS === 'android' && styles.androidContainer]}
-      edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : ['top', 'left', 'right']}
+      edges={Platform.OS === 'android' && !keyboardVisible ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom']}
     >
       <View style={COMMON_STYLES.header}>
         <View style={COMMON_STYLES.headerLeft}>
