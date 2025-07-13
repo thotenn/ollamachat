@@ -149,13 +149,24 @@ const SettingsScreen: React.FC = () => {
       console.log(`Changing provider to: ${providerId}`);
       
       // Prevent multiple rapid clicks
-      if (settings.selectedProviderId === providerId || isChangingProvider) {
+      if (isChangingProvider) {
         return;
       }
       
       setIsChangingProvider(true);
       
-      // Clear models immediately
+      // If clicking on the same provider, just reload models instead of clearing everything
+      if (settings.selectedProviderId === providerId) {
+        console.log(`Reloading models for current provider: ${providerId}`);
+        // Force reload models for the current provider
+        await loadModels();
+        setTimeout(() => {
+          setIsChangingProvider(false);
+        }, 500);
+        return;
+      }
+      
+      // Clear models immediately when switching to different provider
       setModels([]);
       setSelectedModel('');
       
