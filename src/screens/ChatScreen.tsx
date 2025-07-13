@@ -8,6 +8,7 @@ import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessageDB } from '../types';
 import { COLORS } from '@env';
+import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 
 interface ChatScreenProps {
   conversationId?: string;
@@ -356,15 +357,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={COMMON_STYLES.screenContainer}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>AI Chat</Text>
+          <Text style={TYPOGRAPHY.HEADER_TITLE}>AI Chat</Text>
           <TouchableOpacity 
             style={styles.assistantSelector}
             onPress={() => setAssistantModalVisible(true)}
           >
-            <Text style={styles.assistantName}>{currentAssistant?.name || 'Asistente'}</Text>
+            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { marginTop: 0, marginRight: 4 })}>{currentAssistant?.name || 'Asistente'}</Text>
             <Ionicons name="chevron-down" size={16} color={COLORS.TEXT.SECONDARY} />
           </TouchableOpacity>
         </View>
@@ -379,9 +380,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           >
             <Ionicons name="add-circle-outline" size={24} color={COLORS.PRIMARY} />
           </TouchableOpacity>
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
-            <Text style={styles.statusText}>{currentProvider?.name || 'No provider'}</Text>
+          <View style={COMMON_STYLES.statusContainer}>
+            <View style={[COMMON_STYLES.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
+            <Text style={TYPOGRAPHY.STATUS_TEXT}>{currentProvider?.name || 'No provider'}</Text>
             {context && (
               <View style={styles.contextIndicator}>
                 <Ionicons name="link" size={12} color={COLORS.PRIMARY} />
@@ -391,10 +392,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
       </View>
       {!isConnected ? (
-        <View style={styles.emptyContainer}>
+        <View style={COMMON_STYLES.emptyContainer}>
           <Ionicons name="warning-outline" size={48} color={COLORS.TEXT.SECONDARY} />
-          <Text style={styles.emptyText}>No conectado al proveedor de IA</Text>
-          <Text style={styles.emptySubtext}>Verifica la configuración</Text>
+          <Text style={createTextStyle(TYPOGRAPHY.BODY_LARGE, { color: COLORS.TEXT.SECONDARY, marginTop: 16 })}>No conectado al proveedor de IA</Text>
+          <Text style={createTextStyle(TYPOGRAPHY.BODY_MEDIUM, { color: COLORS.TEXT.TERTIARY, marginTop: 8 })}>Verifica la configuración</Text>
         </View>
       ) : (
         <CustomChat
@@ -412,35 +413,36 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         presentationStyle="pageSheet"
         transparent={false}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={COMMON_STYLES.modalContainer}>
+          <View style={COMMON_STYLES.modalHeader}>
             <TouchableOpacity onPress={() => setAssistantModalVisible(false)}>
-              <Text style={styles.modalCancel}>Cancelar</Text>
+              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.TEXT.SECONDARY })}>Cancelar</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Seleccionar Asistente</Text>
+            <Text style={TYPOGRAPHY.MODAL_TITLE}>Seleccionar Asistente</Text>
             <View style={styles.modalPlaceholder} />
           </View>
           
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={COMMON_STYLES.modalContent}>
             {assistants.map((assistant) => (
               <TouchableOpacity
                 key={assistant.id}
                 style={[
-                  styles.assistantOption,
-                  settings.selectedAssistantId === assistant.id && styles.assistantOptionSelected,
+                  COMMON_STYLES.selectableItem,
+                  settings.selectedAssistantId === assistant.id && COMMON_STYLES.selectableItemSelected,
                 ]}
                 onPress={() => handleAssistantChange(assistant.id)}
               >
-                <View style={styles.assistantOptionMain}>
+                <View style={COMMON_STYLES.itemMain}>
                   <Text
-                    style={[
-                      styles.assistantOptionName,
-                      settings.selectedAssistantId === assistant.id && styles.assistantOptionNameSelected,
-                    ]}
+                    style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                      color: settings.selectedAssistantId === assistant.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                      fontWeight: settings.selectedAssistantId === assistant.id ? '600' : 'normal',
+                      marginBottom: 4,
+                    })}
                   >
                     {assistant.name}
                   </Text>
-                  <Text style={styles.assistantOptionDescription}>{assistant.description}</Text>
+                  <Text style={TYPOGRAPHY.BODY_MEDIUM}>{assistant.description}</Text>
                 </View>
                 {settings.selectedAssistantId === assistant.id && (
                   <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
@@ -455,10 +457,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.BACKGROUND.LIGHTER,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -471,21 +469,11 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.TEXT.DARK,
-  },
   assistantSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
     paddingVertical: 4,
-  },
-  assistantName: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
-    marginRight: 4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -501,98 +489,12 @@ const styles = StyleSheet.create({
       userSelect: 'none',
     }),
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
-  },
   contextIndicator: {
     marginLeft: 8,
     padding: 2,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.TEXT.SECONDARY,
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: COLORS.TEXT.TERTIARY,
-    marginTop: 8,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.TEXT.DARK,
-  },
-  modalCancel: {
-    fontSize: 16,
-    color: COLORS.TEXT.SECONDARY,
-  },
   modalPlaceholder: {
     width: 60,
-  },
-  modalContent: {
-    flex: 1,
-    padding: 16,
-  },
-  assistantOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.BORDER.DEFAULT,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-  },
-  assistantOptionSelected: {
-    borderColor: COLORS.PRIMARY,
-    backgroundColor: COLORS.BACKGROUND.SELECTED,
-  },
-  assistantOptionMain: {
-    flex: 1,
-  },
-  assistantOptionName: {
-    fontSize: 16,
-    color: COLORS.TEXT.DARK,
-    marginBottom: 4,
-  },
-  assistantOptionNameSelected: {
-    color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
-  assistantOptionDescription: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
   },
 });
 

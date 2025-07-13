@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ChatConversation } from '../types';
 import databaseService from '../services/databaseService';
 import { COLORS } from '@env';
+import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 
 interface HistoryScreenProps {
   onSelectConversation: (conversationId: string) => void;
@@ -105,17 +106,17 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
 
   const renderConversationItem = ({ item }: { item: ChatConversation }) => (
     <TouchableOpacity
-      style={styles.conversationItem}
+      style={COMMON_STYLES.listItem}
       onPress={() => onSelectConversation(item.id)}
       activeOpacity={0.7}
     >
-      <View style={styles.conversationContent}>
+      <View style={COMMON_STYLES.listItemContent}>
         <View style={styles.conversationHeader}>
-          <Text style={styles.conversationTitle} numberOfLines={2}>
+          <Text style={createTextStyle(TYPOGRAPHY.BODY_LARGE, { fontWeight: '600', lineHeight: 22, marginRight: 12 })} numberOfLines={2}>
             {item.title}
           </Text>
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={COMMON_STYLES.iconButton}
             onPress={() => handleDeleteConversation(item.id, item.title)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -124,21 +125,21 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         </View>
         
         <View style={styles.conversationFooter}>
-          <View style={styles.modelBadge}>
+          <View style={COMMON_STYLES.badge}>
             <Ionicons name="cube-outline" size={12} color={COLORS.PRIMARY} />
-            <Text style={styles.modelText}>{item.model}</Text>
+            <Text style={createTextStyle(TYPOGRAPHY.BODY_SMALL, { color: COLORS.PRIMARY, marginLeft: 4, fontWeight: '500' })}>{item.model}</Text>
           </View>
-          <Text style={styles.dateText}>{formatDate(item.updatedAt)}</Text>
+          <Text style={TYPOGRAPHY.BODY_SMALL}>{formatDate(item.updatedAt)}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
+    <View style={COMMON_STYLES.emptyContainer}>
       <Ionicons name="chatbubbles-outline" size={64} color={COLORS.BORDER.LIGHT} />
-      <Text style={styles.emptyTitle}>No conversations yet</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={createTextStyle(TYPOGRAPHY.BODY_LARGE, { fontWeight: '600', color: COLORS.TEXT.SECONDARY, marginTop: 16, marginBottom: 8 })}>No conversations yet</Text>
+      <Text style={createTextStyle(TYPOGRAPHY.BODY_MEDIUM, { color: COLORS.TEXT.TERTIARY, textAlign: 'center', lineHeight: 22 })}>
         Start a new chat to see your conversation history here
       </Text>
     </View>
@@ -146,23 +147,23 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chat History</Text>
+      <SafeAreaView style={COMMON_STYLES.screenContainer}>
+        <View style={COMMON_STYLES.header}>
+          <Text style={TYPOGRAPHY.HEADER_TITLE}>Chat History</Text>
         </View>
-        <View style={styles.loadingContainer}>
+        <View style={COMMON_STYLES.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+          <Text style={createTextStyle(TYPOGRAPHY.BODY_MEDIUM, { color: COLORS.TEXT.SECONDARY, marginTop: 16 })}>Loading conversations...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chat History</Text>
-        <Text style={styles.headerSubtitle}>
+    <SafeAreaView style={COMMON_STYLES.screenContainer}>
+      <View style={COMMON_STYLES.header}>
+        <Text style={TYPOGRAPHY.HEADER_TITLE}>Chat History</Text>
+        <Text style={TYPOGRAPHY.HEADER_SUBTITLE}>
           {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
         </Text>
       </View>
@@ -172,7 +173,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         renderItem={renderConversationItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
-          styles.listContainer,
+          COMMON_STYLES.listContainer,
           conversations.length === 0 && styles.emptyListContainer,
         ]}
         ListEmptyComponent={renderEmptyState}
@@ -186,114 +187,19 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.BACKGROUND.LIGHTER,
-  },
-  header: {
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.TEXT.DARK,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
-    marginTop: 4,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  emptyListContainer: {
-    flex: 1,
-  },
-  conversationItem: {
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: COLORS.SHADOW.DARK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  conversationContent: {
-    padding: 16,
-  },
   conversationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  conversationTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.TEXT.DARK,
-    lineHeight: 22,
-    marginRight: 12,
-  },
-  deleteButton: {
-    padding: 4,
-  },
   conversationFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  modelBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.BACKGROUND.BADGE,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  modelText: {
-    fontSize: 12,
-    color: COLORS.PRIMARY,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  dateText: {
-    fontSize: 12,
-    color: COLORS.TEXT.TERTIARY,
-  },
-  emptyContainer: {
+  emptyListContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.TEXT.SECONDARY,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: COLORS.TEXT.TERTIARY,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.TEXT.SECONDARY,
   },
 });
 

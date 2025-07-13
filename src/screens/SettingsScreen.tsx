@@ -18,6 +18,7 @@ import providerService, { AIModel } from '../services/providerService';
 import { Provider, Assistant } from '../types';
 import CorsWarning from '../components/CorsWarning';
 import { COLORS } from '@env';
+import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 
 const SettingsScreen: React.FC = () => {
   const {
@@ -255,35 +256,36 @@ const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={COMMON_STYLES.screenContainer}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Configuración</Text>
+        <View style={COMMON_STYLES.header}>
+          <Text style={TYPOGRAPHY.HEADER_TITLE}>Configuración</Text>
         </View>
 
         <CorsWarning />
 
         {/* Providers Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Proveedores de IA</Text>
-          <Text style={styles.sectionSubtitle}>Selecciona y configura tu proveedor de IA</Text>
+        <View style={COMMON_STYLES.section}>
+          <Text style={TYPOGRAPHY.SECTION_TITLE}>Proveedores de IA</Text>
+          <Text style={TYPOGRAPHY.SECTION_SUBTITLE}>Selecciona y configura tu proveedor de IA</Text>
           
           {providers.map((provider) => (
             <TouchableOpacity
               key={provider.id}
               style={[
-                styles.providerItem,
-                settings.selectedProviderId === provider.id && styles.providerItemSelected,
+                COMMON_STYLES.selectableItem,
+                settings.selectedProviderId === provider.id && COMMON_STYLES.selectableItemSelected,
               ]}
               onPress={() => handleProviderChange(provider.id)}
               disabled={isChangingProvider}
             >
-              <View style={styles.providerMain}>
+              <View style={COMMON_STYLES.itemMain}>
                 <Text
-                  style={[
-                    styles.providerName,
-                    settings.selectedProviderId === provider.id && styles.providerNameSelected,
-                  ]}
+                  style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                    color: settings.selectedProviderId === provider.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                    fontWeight: settings.selectedProviderId === provider.id ? '600' : 'normal',
+                    marginRight: 8,
+                  })}
                 >
                   {provider.name}
                 </Text>
@@ -293,7 +295,7 @@ const SettingsScreen: React.FC = () => {
                 )}
               </View>
               <TouchableOpacity
-                style={styles.editButton}
+                style={COMMON_STYLES.iconButton}
                 onPress={() => openProviderEdit(provider)}
               >
                 <Ionicons name="settings-outline" size={18} color={COLORS.TEXT.SECONDARY} />
@@ -301,17 +303,17 @@ const SettingsScreen: React.FC = () => {
             </TouchableOpacity>
           ))}
           
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
-            <Text style={styles.statusText}>
+          <View style={COMMON_STYLES.statusContainer}>
+            <View style={[COMMON_STYLES.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
+            <Text style={TYPOGRAPHY.STATUS_TEXT}>
               {isConnected ? 'Conectado' : 'Desconectado'}
             </Text>
           </View>
         </View>
 
         {/* Models Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Modelo</Text>
+        <View style={COMMON_STYLES.section}>
+          <Text style={TYPOGRAPHY.SECTION_TITLE}>Modelo</Text>
           {isLoading ? (
             <ActivityIndicator style={styles.loader} />
           ) : models.length > 0 ? (
@@ -320,8 +322,8 @@ const SettingsScreen: React.FC = () => {
                 <TouchableOpacity
                   key={model.name}
                   style={[
-                    styles.modelItem,
-                    selectedModel === model.name && styles.modelItemSelected,
+                    COMMON_STYLES.selectableItem,
+                    selectedModel === model.name && COMMON_STYLES.selectableItemSelected,
                   ]}
                   onPress={async () => {
                     setSelectedModel(model.name);
@@ -329,10 +331,10 @@ const SettingsScreen: React.FC = () => {
                   }}
                 >
                   <Text
-                    style={[
-                      styles.modelName,
-                      selectedModel === model.name && styles.modelNameSelected,
-                    ]}
+                    style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                      color: selectedModel === model.name ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                      fontWeight: selectedModel === model.name ? '600' : 'normal',
+                    })}
                   >
                     {model.displayName || model.name}
                   </Text>
@@ -350,51 +352,52 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Assistants Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Asistentes</Text>
+        <View style={COMMON_STYLES.section}>
+          <View style={COMMON_STYLES.sectionHeader}>
+            <Text style={TYPOGRAPHY.SECTION_TITLE}>Asistentes</Text>
             <TouchableOpacity
-              style={styles.addButton}
+              style={COMMON_STYLES.addButton}
               onPress={() => openAssistantEdit()}
             >
               <Ionicons name="add" size={20} color={COLORS.PRIMARY} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.sectionSubtitle}>Selecciona o crea asistentes personalizados</Text>
+          <Text style={TYPOGRAPHY.SECTION_SUBTITLE}>Selecciona o crea asistentes personalizados</Text>
           
           {assistants.map((assistant) => (
             <TouchableOpacity
               key={assistant.id}
               style={[
-                styles.assistantItem,
-                settings.selectedAssistantId === assistant.id && styles.assistantItemSelected,
+                COMMON_STYLES.selectableItem,
+                settings.selectedAssistantId === assistant.id && COMMON_STYLES.selectableItemSelected,
               ]}
               onPress={() => handleAssistantChange(assistant.id)}
             >
-              <View style={styles.assistantMain}>
+              <View style={COMMON_STYLES.itemMain}>
                 <Text
-                  style={[
-                    styles.assistantName,
-                    settings.selectedAssistantId === assistant.id && styles.assistantNameSelected,
-                  ]}
+                  style={createTextStyle(TYPOGRAPHY.BODY_LARGE, {
+                    color: settings.selectedAssistantId === assistant.id ? COLORS.PRIMARY : COLORS.TEXT.DARK,
+                    fontWeight: settings.selectedAssistantId === assistant.id ? '600' : 'normal',
+                    marginBottom: 2,
+                  })}
                 >
                   {assistant.name}
                 </Text>
-                <Text style={styles.assistantDescription}>{assistant.description}</Text>
+                <Text style={TYPOGRAPHY.BODY_SMALL}>{assistant.description}</Text>
                 {settings.selectedAssistantId === assistant.id && (
                   <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                 )}
               </View>
-              <View style={styles.assistantActions}>
+              <View style={COMMON_STYLES.itemActions}>
                 <TouchableOpacity
-                  style={styles.editButton}
+                  style={COMMON_STYLES.iconButton}
                   onPress={() => openAssistantEdit(assistant)}
                 >
                   <Ionicons name="create-outline" size={18} color={COLORS.TEXT.SECONDARY} />
                 </TouchableOpacity>
                 {!assistant.isDefault && (
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={COMMON_STYLES.actionButton}
                     onPress={() => handleAssistantDelete(assistant.id)}
                   >
                     <Ionicons name="trash-outline" size={18} color={COLORS.ERROR} />
@@ -406,14 +409,14 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, (!isConnected || isSaving) && styles.saveButtonDisabled]}
+          style={[COMMON_STYLES.primaryButton, (!isConnected || isSaving) && COMMON_STYLES.primaryButtonDisabled]}
           onPress={handleSave}
           disabled={!isConnected || isSaving}
         >
           {isSaving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.saveButtonText}>Guardar Configuración</Text>
+            <Text style={TYPOGRAPHY.BUTTON_PRIMARY}>Guardar Configuración</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -424,33 +427,33 @@ const SettingsScreen: React.FC = () => {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={COMMON_STYLES.modalContainer}>
+          <View style={COMMON_STYLES.modalHeader}>
             <TouchableOpacity onPress={() => setProviderModalVisible(false)}>
-              <Text style={styles.modalCancel}>Cancelar</Text>
+              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.TEXT.SECONDARY })}>Cancelar</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Configurar Proveedor</Text>
+            <Text style={TYPOGRAPHY.MODAL_TITLE}>Configurar Proveedor</Text>
             <TouchableOpacity onPress={handleProviderSave}>
-              <Text style={styles.modalSave}>Guardar</Text>
+              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.PRIMARY })}>Guardar</Text>
             </TouchableOpacity>
           </View>
           
           {editingProvider && (
-            <ScrollView style={styles.modalContent}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Nombre</Text>
+            <ScrollView style={COMMON_STYLES.modalContent}>
+              <View style={COMMON_STYLES.formGroup}>
+                <Text style={TYPOGRAPHY.FORM_LABEL}>Nombre</Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={COMMON_STYLES.formInput}
                   value={editingProvider.name}
                   onChangeText={(text) => setEditingProvider({ ...editingProvider, name: text })}
                   placeholder="Nombre del proveedor"
                 />
               </View>
               
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>URL Base</Text>
+              <View style={COMMON_STYLES.formGroup}>
+                <Text style={TYPOGRAPHY.FORM_LABEL}>URL Base</Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={COMMON_STYLES.formInput}
                   value={editingProvider.baseUrl}
                   onChangeText={(text) => setEditingProvider({ ...editingProvider, baseUrl: text })}
                   placeholder="https://api.example.com"
@@ -459,10 +462,10 @@ const SettingsScreen: React.FC = () => {
                 />
               </View>
               
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>API Key (opcional)</Text>
+              <View style={COMMON_STYLES.formGroup}>
+                <Text style={TYPOGRAPHY.FORM_LABEL}>API Key (opcional)</Text>
                 <TextInput
-                  style={styles.formInput}
+                  style={COMMON_STYLES.formInput}
                   value={editingProvider.apiKey || ''}
                   onChangeText={(text) => setEditingProvider({ ...editingProvider, apiKey: text })}
                   placeholder="Tu API Key"
@@ -482,34 +485,34 @@ const SettingsScreen: React.FC = () => {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={COMMON_STYLES.modalContainer}>
+          <View style={COMMON_STYLES.modalHeader}>
             <TouchableOpacity onPress={() => setAssistantModalVisible(false)}>
-              <Text style={styles.modalCancel}>Cancelar</Text>
+              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.TEXT.SECONDARY })}>Cancelar</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>
+            <Text style={TYPOGRAPHY.MODAL_TITLE}>
               {editingAssistant ? 'Editar Asistente' : 'Nuevo Asistente'}
             </Text>
             <TouchableOpacity onPress={handleAssistantSave}>
-              <Text style={styles.modalSave}>Guardar</Text>
+              <Text style={createTextStyle(TYPOGRAPHY.MODAL_BUTTON, { color: COLORS.PRIMARY })}>Guardar</Text>
             </TouchableOpacity>
           </View>
           
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Nombre</Text>
+          <ScrollView style={COMMON_STYLES.modalContent}>
+            <View style={COMMON_STYLES.formGroup}>
+              <Text style={TYPOGRAPHY.FORM_LABEL}>Nombre</Text>
               <TextInput
-                style={styles.formInput}
+                style={COMMON_STYLES.formInput}
                 value={newAssistant.name}
                 onChangeText={(text) => setNewAssistant({ ...newAssistant, name: text })}
                 placeholder="Nombre del asistente"
               />
             </View>
             
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Descripción</Text>
+            <View style={COMMON_STYLES.formGroup}>
+              <Text style={TYPOGRAPHY.FORM_LABEL}>Descripción</Text>
               <TextInput
-                style={styles.formInput}
+                style={COMMON_STYLES.formInput}
                 value={newAssistant.description}
                 onChangeText={(text) => setNewAssistant({ ...newAssistant, description: text })}
                 placeholder="Breve descripción del asistente"
@@ -517,10 +520,10 @@ const SettingsScreen: React.FC = () => {
               />
             </View>
             
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Instrucciones</Text>
+            <View style={COMMON_STYLES.formGroup}>
+              <Text style={TYPOGRAPHY.FORM_LABEL}>Instrucciones</Text>
               <TextInput
-                style={[styles.formInput, styles.formTextArea]}
+                style={[COMMON_STYLES.formInput, COMMON_STYLES.formTextArea]}
                 value={newAssistant.instructions}
                 onChangeText={(text) => setNewAssistant({ ...newAssistant, instructions: text })}
                 placeholder="Instrucciones detalladas para el asistente..."
@@ -529,9 +532,9 @@ const SettingsScreen: React.FC = () => {
               />
             </View>
             
-            <View style={styles.formGroup}>
-              <View style={styles.switchRow}>
-                <Text style={styles.formLabel}>Asistente por defecto</Text>
+            <View style={COMMON_STYLES.formGroup}>
+              <View style={COMMON_STYLES.switchRow}>
+                <Text style={TYPOGRAPHY.FORM_LABEL}>Asistente por defecto</Text>
                 <Switch
                   value={newAssistant.isDefault}
                   onValueChange={(value) => setNewAssistant({ ...newAssistant, isDefault: value })}
@@ -546,83 +549,8 @@ const SettingsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.BACKGROUND.LIGHTER,
-  },
   scrollContent: {
     paddingBottom: 30,
-  },
-  header: {
-    padding: 16,
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.TEXT.DARK,
-  },
-  section: {
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-    marginTop: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    shadowColor: COLORS.SHADOW.DARK,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.TEXT.DARK,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
-    marginBottom: 12,
-  },
-  addButton: {
-    padding: 4,
-  },
-  providerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.BORDER.DEFAULT,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-  },
-  providerItemSelected: {
-    borderColor: COLORS.PRIMARY,
-    backgroundColor: COLORS.BACKGROUND.SELECTED,
-  },
-  providerMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  providerName: {
-    fontSize: 16,
-    color: COLORS.TEXT.DARK,
-    marginRight: 8,
-  },
-  providerNameSelected: {
-    color: COLORS.PRIMARY,
-    fontWeight: '600',
   },
   providerType: {
     fontSize: 12,
@@ -633,88 +561,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 8,
   },
-  editButton: {
-    padding: 8,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
-  },
   modelsContainer: {
     marginTop: 8,
-  },
-  modelItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.BORDER.DEFAULT,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-  },
-  modelItemSelected: {
-    borderColor: COLORS.PRIMARY,
-    backgroundColor: COLORS.BACKGROUND.SELECTED,
-  },
-  modelName: {
-    fontSize: 16,
-    color: COLORS.TEXT.DARK,
-  },
-  modelNameSelected: {
-    color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
-  assistantItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.BORDER.DEFAULT,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-  },
-  assistantItemSelected: {
-    borderColor: COLORS.PRIMARY,
-    backgroundColor: COLORS.BACKGROUND.SELECTED,
-  },
-  assistantMain: {
-    flex: 1,
-  },
-  assistantName: {
-    fontSize: 16,
-    color: COLORS.TEXT.DARK,
-    marginBottom: 2,
-  },
-  assistantNameSelected: {
-    color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
-  assistantDescription: {
-    fontSize: 12,
-    color: COLORS.TEXT.SECONDARY,
-  },
-  assistantActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 4,
   },
   noModelsText: {
     textAlign: 'center',
@@ -724,81 +572,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 20,
-  },
-  saveButton: {
-    backgroundColor: COLORS.PRIMARY,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginHorizontal: 16,
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: COLORS.BORDER.LIGHT,
-  },
-  saveButtonText: {
-    color: COLORS.TEXT.WHITE,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.TEXT.DARK,
-  },
-  modalCancel: {
-    fontSize: 16,
-    color: COLORS.TEXT.SECONDARY,
-  },
-  modalSave: {
-    fontSize: 16,
-    color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 16,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.TEXT.DARK,
-    marginBottom: 8,
-  },
-  formInput: {
-    borderWidth: 1,
-    borderColor: COLORS.BORDER.LIGHTER,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-  },
-  formTextArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
 });
 
