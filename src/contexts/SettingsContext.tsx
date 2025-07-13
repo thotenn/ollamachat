@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppSettings, Provider, Assistant } from '../types';
 import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
+import { STORAGE_KEYS, MODELS, PROVIDERS, DEFAULTS } from '@env';
 
 interface SettingsContextData {
   settings: AppSettings;
@@ -23,13 +24,13 @@ interface SettingsContextData {
 
 const SettingsContext = createContext<SettingsContextData>({} as SettingsContextData);
 
-const SETTINGS_KEY = '@ollamachat:settings';
+const SETTINGS_KEY = STORAGE_KEYS.SETTINGS;
 
 export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<AppSettings>({
-    selectedProviderId: 'ollama-default',
-    selectedModel: 'llama2',
-    selectedAssistantId: 'default-assistant',
+    selectedProviderId: PROVIDERS.IDS.OLLAMA,
+    selectedModel: MODELS.OLLAMA.DEFAULT,
+    selectedAssistantId: DEFAULTS.ASSISTANT.ID,
   });
   const [isConnected, setIsConnected] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -48,20 +49,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [currentProvider]);
 
-  // Sync currentProvider when providers list or selectedProviderId changes
-  // NOTE: Disabled to prevent race conditions with updateSettings
-  // The updateSettings function now handles provider sync directly
-  /*
-  useEffect(() => {
-    if (providers.length > 0 && settings.selectedProviderId) {
-      const provider = providers.find(p => p.id === settings.selectedProviderId);
-      if (provider && (!currentProvider || currentProvider.id !== provider.id)) {
-        console.log('[SettingsContext] Syncing currentProvider from settings:', provider.name);
-        setCurrentProvider(provider);
-      }
-    }
-  }, [providers, settings.selectedProviderId]);
-  */
 
   const initializeApp = async () => {
     try {
@@ -75,8 +62,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       // Load settings
       await loadSettings();
     } catch (error) {
-      console.error('Error initializing app:', error);
-    }
+          }
   };
 
   const loadSettings = async () => {
@@ -91,12 +77,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const assistant = assistants.find(a => a.id === parsed.selectedAssistantId);
         
         if (provider) {
-          console.log('[SettingsContext] Setting initial current provider:', provider.name);
-          setCurrentProvider(provider);
+                    setCurrentProvider(provider);
           providerService.setProvider(provider);
         } else {
-          console.warn('[SettingsContext] Initial provider not found:', parsed.selectedProviderId);
-        }
+                  }
         if (assistant) {
           setCurrentAssistant(assistant);
         }
@@ -108,15 +92,14 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (defaultProvider && defaultAssistant) {
           const defaultSettings = {
             selectedProviderId: defaultProvider.id,
-            selectedModel: 'llama2',
+            selectedModel: MODELS.OLLAMA.DEFAULT,
             selectedAssistantId: defaultAssistant.id,
           };
           await updateSettings(defaultSettings);
         }
       }
     } catch (error) {
-      console.error('Error loading settings:', error);
-    }
+          }
   };
 
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
@@ -127,23 +110,18 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       // Then save to AsyncStorage (non-blocking)
       AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(updated)).catch(error => {
-        console.error('Error saving to AsyncStorage:', error);
-      });
+              });
       
       // Update current provider and assistant if changed
       if (newSettings.selectedProviderId !== undefined) {
-        console.log('[SettingsContext] Updating selectedProviderId to:', newSettings.selectedProviderId);
-        console.log('[SettingsContext] Available providers:', providers.map(p => ({ id: p.id, name: p.name })));
-        
+                
         const provider = providers.find(p => p.id === newSettings.selectedProviderId);
         if (provider) {
-          console.log('[SettingsContext] Found provider:', provider.name);
-          setCurrentProvider(provider);
+                    setCurrentProvider(provider);
           // Also update provider service immediately
           providerService.setProvider(provider);
         } else {
-          console.error('[SettingsContext] Provider not found:', newSettings.selectedProviderId);
-        }
+                  }
       }
       
       if (newSettings.selectedAssistantId !== undefined) {
@@ -153,20 +131,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
-    }
+          }
   };
 
   const checkConnection = async () => {
     if (!currentProvider) {
-      console.log('[SettingsContext] No currentProvider, setting isConnected to false');
-      setIsConnected(false);
+            setIsConnected(false);
       return;
     }
     
-    console.log('[SettingsContext] Checking connection for:', currentProvider.name);
     const connected = await providerService.checkConnection(currentProvider.id);
-    console.log('[SettingsContext] Connection result for', currentProvider.name, ':', connected);
     setIsConnected(connected);
   };
 
@@ -180,8 +154,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         providerService.setProvider(provider);
       });
     } catch (error) {
-      console.error('Error refreshing providers:', error);
-    }
+          }
   };
 
   const refreshAssistants = async () => {
@@ -189,8 +162,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       const assistantList = await databaseService.getAssistants();
       setAssistants(assistantList);
     } catch (error) {
-      console.error('Error refreshing assistants:', error);
-    }
+          }
   };
 
   const updateProvider = async (providerId: string, updates: Partial<Provider>) => {
@@ -206,8 +178,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-      console.error('Error updating provider:', error);
-    }
+          }
   };
 
   const createAssistant = async (assistant: Omit<Assistant, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -215,8 +186,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       await databaseService.createAssistant(assistant);
       await refreshAssistants();
     } catch (error) {
-      console.error('Error creating assistant:', error);
-    }
+          }
   };
 
   const updateAssistant = async (assistantId: string, updates: Partial<Assistant>) => {
@@ -232,8 +202,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-      console.error('Error updating assistant:', error);
-    }
+          }
   };
 
   const deleteAssistant = async (assistantId: string) => {
@@ -249,8 +218,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
       }
     } catch (error) {
-      console.error('Error deleting assistant:', error);
-    }
+          }
   };
 
   return (

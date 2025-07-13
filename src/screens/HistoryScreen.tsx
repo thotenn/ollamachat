@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { ChatConversation } from '../types';
 import databaseService from '../services/databaseService';
+import { COLORS } from '@env';
 
 interface HistoryScreenProps {
   onSelectConversation: (conversationId: string) => void;
@@ -29,7 +30,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
       const data = await databaseService.getConversations();
       setConversations(data);
     } catch (error) {
-      console.error('Error loading conversations:', error);
       Alert.alert('Error', 'Failed to load chat history');
     } finally {
       setLoading(false);
@@ -54,7 +54,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         await databaseService.initDatabase();
         await loadConversations();
       } catch (error) {
-        console.error('Error initializing database:', error);
         Alert.alert('Error', 'Failed to initialize database');
       }
     };
@@ -79,7 +78,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
               await databaseService.deleteConversation(conversationId);
               await loadConversations();
             } catch (error) {
-              console.error('Error deleting conversation:', error);
               Alert.alert('Error', 'Failed to delete conversation');
             }
           },
@@ -121,13 +119,13 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
             onPress={() => handleDeleteConversation(item.id, item.title)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+            <Ionicons name="trash-outline" size={16} color={COLORS.DESTRUCTIVE} />
           </TouchableOpacity>
         </View>
         
         <View style={styles.conversationFooter}>
           <View style={styles.modelBadge}>
-            <Ionicons name="cube-outline" size={12} color="#007AFF" />
+            <Ionicons name="cube-outline" size={12} color={COLORS.PRIMARY} />
             <Text style={styles.modelText}>{item.model}</Text>
           </View>
           <Text style={styles.dateText}>{formatDate(item.updatedAt)}</Text>
@@ -138,7 +136,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+      <Ionicons name="chatbubbles-outline" size={64} color={COLORS.BORDER.LIGHT} />
       <Text style={styles.emptyTitle}>No conversations yet</Text>
       <Text style={styles.emptySubtitle}>
         Start a new chat to see your conversation history here
@@ -153,7 +151,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
           <Text style={styles.headerTitle}>Chat History</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={COLORS.PRIMARY} />
           <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
       </SafeAreaView>
@@ -190,23 +188,23 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
   header: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.BORDER.DEFAULT,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     marginTop: 4,
   },
   listContainer: {
@@ -216,10 +214,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   conversationItem: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: COLORS.SHADOW.DARK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -238,7 +236,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
     lineHeight: 22,
     marginRight: 12,
   },
@@ -253,20 +251,20 @@ const styles = StyleSheet.create({
   modelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F8FF',
+    backgroundColor: COLORS.BACKGROUND.BADGE,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   modelText: {
     fontSize: 12,
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     marginLeft: 4,
     fontWeight: '500',
   },
   dateText: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.TEXT.TERTIARY,
   },
   emptyContainer: {
     flex: 1,
@@ -277,13 +275,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#999',
+    color: COLORS.TEXT.TERTIARY,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -295,7 +293,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
 });
 

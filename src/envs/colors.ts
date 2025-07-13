@@ -1,0 +1,45 @@
+export const COLORS = {
+  PRIMARY: '#007AFF',
+  SUCCESS: '#4CAF50',
+  ERROR: '#F44336',
+  WARNING: '#FF9800',
+  DESTRUCTIVE: '#FF3B30',
+  BACKGROUND: {
+    WHITE: '#FFFFFF',
+    LIGHT: '#F9F9F9',
+    LIGHTER: '#F5F5F5',
+    DARK: '#333333',
+    SELECTED: '#e6f2ff',
+    TYPING: '#f0f0f0',
+    BADGE: '#F0F8FF',
+  },
+  BORDER: {
+    DEFAULT: '#E0E0E0',
+    LIGHT: '#CCC',
+    LIGHTER: '#ddd',
+  },
+  TEXT: {
+    PRIMARY: '#000000',
+    SECONDARY: '#666666',
+    TERTIARY: '#999999',
+    WHITE: '#FFFFFF',
+    DARK: '#333333',
+  },
+  SHADOW: {
+    LIGHT: 'rgba(0, 0, 0, 0.1)',
+    MEDIUM: 'rgba(0, 0, 0, 0.2)',
+    DARK: '#000',
+  },
+  CORS: {
+    BACKGROUND: '#FFF4E6',
+    BORDER: '#FFD60A',
+    TITLE: '#BF5700',
+    TEXT: '#8B4513',
+    NOTE: '#A0522D',
+    WARNING_ICON: '#FF9500',
+    CODE_BG: '#F5F5F5',
+  },
+  TRANSPARENCY: {
+    WHITE_70: 'rgba(255, 255, 255, 0.7)',
+  },
+} as const;

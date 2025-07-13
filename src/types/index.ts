@@ -50,10 +50,12 @@ export interface OllamaModel {
   };
 }
 
+import { ProviderType } from '../envs/providers';
+
 export interface Provider {
   id: string;
   name: string;
-  type: 'ollama' | 'anthropic' | 'openai' | 'gemini';
+  type: ProviderType;
   baseUrl: string;
   apiKey?: string;
   isDefault: boolean;

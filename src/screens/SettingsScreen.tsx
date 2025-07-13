@@ -17,6 +17,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import providerService, { AIModel } from '../services/providerService';
 import { Provider, Assistant } from '../types';
 import CorsWarning from '../components/CorsWarning';
+import { COLORS } from '@env';
 
 const SettingsScreen: React.FC = () => {
   const {
@@ -69,12 +70,9 @@ const SettingsScreen: React.FC = () => {
 
   // Limpiar modelos cuando cambie el proveedor seleccionado
   useEffect(() => {
-    console.log(`Provider ID changed to: ${settings.selectedProviderId}`);
-    console.log(`Current provider:`, currentProvider?.name || 'none');
     
     // Si el proveedor cambió, limpiar modelos inmediatamente
     if (currentProvider && settings.selectedProviderId !== currentProvider.id) {
-      console.log('Provider mismatch detected, clearing models');
       setModels([]);
       setSelectedModel('');
     }
@@ -82,17 +80,14 @@ const SettingsScreen: React.FC = () => {
 
   const loadModels = async () => {
     if (!currentProvider) {
-      console.log('No current provider, skipping model loading');
       return;
     }
     
     // Check if we're already loading models for this provider
     if (currentProvider.id !== settings.selectedProviderId) {
-      console.log(`Provider mismatch during loadModels, skipping. Current: ${currentProvider.id}, Settings: ${settings.selectedProviderId}`);
       return;
     }
     
-    console.log(`Loading models for provider: ${currentProvider.name} (${currentProvider.id})`);
     setIsLoading(true);
     
     try {
@@ -100,32 +95,26 @@ const SettingsScreen: React.FC = () => {
       
       // Double-check provider hasn't changed during async operation
       if (currentProvider.id !== settings.selectedProviderId) {
-        console.log('Provider changed during model loading, aborting');
         return;
       }
       
-      console.log(`Loaded ${availableModels.length} models for ${currentProvider.name}`);
       setModels(availableModels);
       
       if (availableModels.length > 0) {
         // Auto-seleccionar el primer modelo si no hay uno válido seleccionado
         if (!availableModels.find(m => m.name === selectedModel)) {
           const firstModel = availableModels[0].name;
-          console.log(`Auto-selecting first model: ${firstModel}`);
           setSelectedModel(firstModel);
           // Only update settings with model, not triggering provider changes
           await updateSettings({ selectedModel: firstModel });
         } else {
-          console.log(`Current model "${selectedModel}" is valid for this provider`);
         }
       } else {
-        console.log(`No models available for ${currentProvider.name}, clearing selection`);
         setSelectedModel('');
         // Only update model, not provider
         await updateSettings({ selectedModel: '' });
       }
     } catch (error) {
-      console.error(`Error loading models for ${currentProvider.name}:`, error);
       setModels([]);
       setSelectedModel('');
     } finally {
@@ -149,11 +138,9 @@ const SettingsScreen: React.FC = () => {
 
   const handleProviderChange = async (providerId: string) => {
     try {
-      console.log(`Changing provider to: ${providerId}`);
       
       // Prevent multiple rapid clicks
       if (settings.selectedProviderId === providerId || isChangingProvider) {
-        console.log('Provider already selected or change in progress, ignoring');
         return;
       }
       
@@ -169,14 +156,12 @@ const SettingsScreen: React.FC = () => {
         selectedModel: ''
       });
       
-      console.log(`Provider changed successfully to: ${providerId}`);
       
       // Small delay to ensure state propagation
       setTimeout(() => {
         setIsChangingProvider(false);
       }, 500);
     } catch (error) {
-      console.error('Error changing provider:', error);
       setIsChangingProvider(false);
     }
   };
@@ -185,7 +170,6 @@ const SettingsScreen: React.FC = () => {
     try {
       await updateSettings({ selectedAssistantId: assistantId });
     } catch (error) {
-      console.error('Error changing assistant:', error);
     }
   };
 
@@ -305,20 +289,20 @@ const SettingsScreen: React.FC = () => {
                 </Text>
                 <Text style={styles.providerType}>{provider.type.toUpperCase()}</Text>
                 {settings.selectedProviderId === provider.id && (
-                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                 )}
               </View>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => openProviderEdit(provider)}
               >
-                <Ionicons name="settings-outline" size={18} color="#666" />
+                <Ionicons name="settings-outline" size={18} color={COLORS.TEXT.SECONDARY} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
           
           <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
+            <View style={[styles.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
             <Text style={styles.statusText}>
               {isConnected ? 'Conectado' : 'Desconectado'}
             </Text>
@@ -353,7 +337,7 @@ const SettingsScreen: React.FC = () => {
                     {model.displayName || model.name}
                   </Text>
                   {selectedModel === model.name && (
-                    <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                    <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -373,7 +357,7 @@ const SettingsScreen: React.FC = () => {
               style={styles.addButton}
               onPress={() => openAssistantEdit()}
             >
-              <Ionicons name="add" size={20} color="#007AFF" />
+              <Ionicons name="add" size={20} color={COLORS.PRIMARY} />
             </TouchableOpacity>
           </View>
           <Text style={styles.sectionSubtitle}>Selecciona o crea asistentes personalizados</Text>
@@ -398,7 +382,7 @@ const SettingsScreen: React.FC = () => {
                 </Text>
                 <Text style={styles.assistantDescription}>{assistant.description}</Text>
                 {settings.selectedAssistantId === assistant.id && (
-                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                 )}
               </View>
               <View style={styles.assistantActions}>
@@ -406,14 +390,14 @@ const SettingsScreen: React.FC = () => {
                   style={styles.editButton}
                   onPress={() => openAssistantEdit(assistant)}
                 >
-                  <Ionicons name="create-outline" size={18} color="#666" />
+                  <Ionicons name="create-outline" size={18} color={COLORS.TEXT.SECONDARY} />
                 </TouchableOpacity>
                 {!assistant.isDefault && (
                   <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => handleAssistantDelete(assistant.id)}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#F44336" />
+                    <Ionicons name="trash-outline" size={18} color={COLORS.ERROR} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -564,29 +548,29 @@ const SettingsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
   scrollContent: {
     paddingBottom: 30,
   },
   header: {
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.BORDER.DEFAULT,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   section: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     marginTop: 16,
     padding: 16,
     marginHorizontal: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: COLORS.SHADOW.DARK,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -601,11 +585,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     marginBottom: 12,
   },
   addButton: {
@@ -617,14 +601,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   providerItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e6f2ff',
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: COLORS.BACKGROUND.SELECTED,
   },
   providerMain: {
     flex: 1,
@@ -633,17 +617,17 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.TEXT.DARK,
     marginRight: 8,
   },
   providerNameSelected: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   providerType: {
     fontSize: 12,
-    color: '#666',
-    backgroundColor: '#e0e0e0',
+    color: COLORS.TEXT.SECONDARY,
+    backgroundColor: COLORS.BORDER.DEFAULT,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -665,7 +649,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
   modelsContainer: {
     marginTop: 8,
@@ -676,21 +660,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   modelItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e6f2ff',
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: COLORS.BACKGROUND.SELECTED,
   },
   modelName: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   modelNameSelected: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   assistantItem: {
@@ -699,30 +683,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   assistantItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e6f2ff',
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: COLORS.BACKGROUND.SELECTED,
   },
   assistantMain: {
     flex: 1,
   },
   assistantName: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.TEXT.DARK,
     marginBottom: 2,
   },
   assistantNameSelected: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   assistantDescription: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
   assistantActions: {
     flexDirection: 'row',
@@ -734,7 +718,7 @@ const styles = StyleSheet.create({
   },
   noModelsText: {
     textAlign: 'center',
-    color: '#999',
+    color: COLORS.TEXT.TERTIARY,
     fontSize: 14,
     marginTop: 20,
   },
@@ -742,7 +726,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
@@ -751,17 +735,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: COLORS.BORDER.LIGHT,
   },
   saveButtonText: {
-    color: 'white',
+    color: COLORS.TEXT.WHITE,
     fontSize: 18,
     fontWeight: '600',
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -769,20 +753,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.BORDER.DEFAULT,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   modalCancel: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
   modalSave: {
     fontSize: 16,
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   modalContent: {
@@ -795,17 +779,17 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
     marginBottom: 8,
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: COLORS.BORDER.LIGHTER,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   formTextArea: {
     height: 120,

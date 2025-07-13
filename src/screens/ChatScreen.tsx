@@ -7,6 +7,7 @@ import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessageDB } from '../types';
+import { COLORS } from '@env';
 
 interface ChatScreenProps {
   conversationId?: string;
@@ -47,7 +48,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       const conversation = await databaseService.getConversationById(convId);
       if (conversation) {
         const conversationMessages = await databaseService.getConversationMessages(convId);
-        console.log('Loaded messages:', conversationMessages.length);
         setMessages(conversationMessages);
         setCurrentConversationId(convId);
         setMessageCount(conversationMessages.length);
@@ -58,7 +58,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
             const parsedContext = JSON.parse(conversation.context);
             setContext(parsedContext);
           } catch (e) {
-            console.error('Error parsing context:', e);
             setContext(undefined);
           }
         } else {
@@ -66,7 +65,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading conversation:', error);
       Alert.alert('Error', 'Failed to load conversation');
     }
   };
@@ -103,11 +101,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     if (isTopicChange) {
       // For topic changes, limit context to avoid confusion
       historyLimit = 4; // Only last 2 exchanges (4 messages)
-      console.log('Topic change detected, limiting context to recent messages');
     } else {
       // For continuing conversation, use more context
       historyLimit = 10;
-      console.log('Continuing topic, using full context');
     }
 
     // Convert to the format expected by APIs like Anthropic
@@ -120,7 +116,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         content: msg.text
       }));
 
-    console.log(`Built message history with ${history.length} messages for context`);
     return history;
   };
 
@@ -241,8 +236,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       // Build message history for context-aware providers (like Anthropic)
       const messageHistory = buildMessageHistory(messages, text);
       
-      console.log('Sending message with context:', context ? `${context.length} tokens` : 'no context');
-      console.log('Message history length:', messageHistory.length);
       
       await providerService.streamResponse(
         currentProvider.id,
@@ -268,7 +261,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           
           // Update context for next conversation
           if (newContext) {
-            console.log('Updating context with', newContext.length, 'tokens');
             setContext(newContext);
           }
 
@@ -302,9 +294,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
                 
                 const title = await providerService.generateChatTitle(currentProvider.id, conversationContext, settings.selectedModel);
                 await databaseService.updateConversation(conversationId, { title });
-                console.log(`Generated title (message ${userMessageCount}/3):`, title);
               } catch (error) {
-                console.error('Error generating title:', error);
               }
             }
           }
@@ -312,7 +302,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       );
 
     } catch (error) {
-      console.error('Error sending message:', error);
       Alert.alert('Error', 'No se pudo enviar el mensaje');
       setIsTyping(false);
       
@@ -323,23 +312,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant]);
 
   const handleClearConversation = useCallback(() => {
-    console.log('Clear conversation button pressed, Platform:', Platform.OS);
     
     const clearConversation = () => {
-      console.log('Clearing conversation...');
       startNewConversation();
       onConversationChange?.(undefined);
     };
 
     if (Platform.OS === 'web') {
       // En web, usar confirm nativo
-      console.log('Using web confirm dialog');
       if (window.confirm('¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.')) {
         clearConversation();
       }
     } else {
       // En móvil, usar Alert de React Native
-      console.log('Using mobile Alert dialog');
       Alert.alert(
         'Nueva Conversación',
         '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
@@ -363,7 +348,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       await updateSettings({ selectedAssistantId: assistantId });
       setAssistantModalVisible(false);
     } catch (error) {
-      console.error('Error changing assistant:', error);
     }
   };
 
@@ -377,7 +361,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
             onPress={() => setAssistantModalVisible(true)}
           >
             <Text style={styles.assistantName}>{currentAssistant?.name || 'Asistente'}</Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
+            <Ionicons name="chevron-down" size={16} color={COLORS.TEXT.SECONDARY} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
@@ -389,14 +373,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
             accessibilityLabel="Nueva conversación"
             accessibilityRole="button"
           >
-            <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+            <Ionicons name="add-circle-outline" size={24} color={COLORS.PRIMARY} />
           </TouchableOpacity>
           <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: isConnected ? '#4CAF50' : '#F44336' }]} />
+            <View style={[styles.statusDot, { backgroundColor: isConnected ? COLORS.SUCCESS : COLORS.ERROR }]} />
             <Text style={styles.statusText}>{currentProvider?.name || 'No provider'}</Text>
             {context && (
               <View style={styles.contextIndicator}>
-                <Ionicons name="link" size={12} color="#007AFF" />
+                <Ionicons name="link" size={12} color={COLORS.PRIMARY} />
               </View>
             )}
           </View>
@@ -404,7 +388,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       </View>
       {!isConnected ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="warning-outline" size={48} color="#666" />
+          <Ionicons name="warning-outline" size={48} color={COLORS.TEXT.SECONDARY} />
           <Text style={styles.emptyText}>No conectado al proveedor de IA</Text>
           <Text style={styles.emptySubtext}>Verifica la configuración</Text>
         </View>
@@ -455,7 +439,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
                   <Text style={styles.assistantOptionDescription}>{assistant.description}</Text>
                 </View>
                 {settings.selectedAssistantId === assistant.id && (
-                  <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                  <Ionicons name="checkmark-circle" size={20} color={COLORS.PRIMARY} />
                 )}
               </TouchableOpacity>
             ))}
@@ -469,16 +453,16 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.BORDER.DEFAULT,
   },
   headerLeft: {
     flex: 1,
@@ -486,7 +470,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   assistantSelector: {
     flexDirection: 'row',
@@ -496,7 +480,7 @@ const styles = StyleSheet.create({
   },
   assistantName: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     marginRight: 4,
   },
   headerRight: {
@@ -525,7 +509,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
   contextIndicator: {
     marginLeft: 8,
@@ -538,18 +522,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.TEXT.TERTIARY,
     marginTop: 8,
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -557,16 +541,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: COLORS.BORDER.DEFAULT,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   modalCancel: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
   modalPlaceholder: {
     width: 60,
@@ -581,30 +565,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   assistantOptionSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#e6f2ff',
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: COLORS.BACKGROUND.SELECTED,
   },
   assistantOptionMain: {
     flex: 1,
   },
   assistantOptionName: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.TEXT.DARK,
     marginBottom: 4,
   },
   assistantOptionNameSelected: {
-    color: '#007AFF',
+    color: COLORS.PRIMARY,
     fontWeight: '600',
   },
   assistantOptionDescription: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
   },
 });
 

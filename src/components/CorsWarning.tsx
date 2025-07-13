@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '@env';
 
 const CorsWarning: React.FC = () => {
   if (Platform.OS !== 'web') {
@@ -9,7 +10,7 @@ const CorsWarning: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Ionicons name="information-circle" size={20} color="#FF9500" />
+      <Ionicons name="information-circle" size={20} color={COLORS.CORS.WARNING_ICON} />
       <View style={styles.textContainer}>
         <Text style={styles.title}>Información sobre APIs Web</Text>
         <Text style={styles.description}>
@@ -30,13 +31,13 @@ const CorsWarning: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#FFF4E6',
+    backgroundColor: COLORS.CORS.BACKGROUND,
     padding: 12,
     marginHorizontal: 16,
     marginTop: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FFD60A',
+    borderColor: COLORS.CORS.BORDER,
   },
   textContainer: {
     flex: 1,
@@ -45,30 +46,30 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#BF5700',
+    color: COLORS.CORS.TITLE,
     marginBottom: 4,
   },
   description: {
     fontSize: 12,
-    color: '#8B4513',
+    color: COLORS.CORS.TEXT,
     marginBottom: 4,
     lineHeight: 16,
   },
   instruction: {
     fontSize: 12,
-    color: '#8B4513',
+    color: COLORS.CORS.TEXT,
     marginBottom: 4,
   },
   code: {
     fontFamily: 'monospace',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.CORS.CODE_BG,
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
   },
   note: {
     fontSize: 11,
-    color: '#A0522D',
+    color: COLORS.CORS.NOTE,
     fontStyle: 'italic',
   },
 });

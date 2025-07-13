@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { OllamaResponse, OllamaGenerateRequest, OllamaModel } from '../types';
+import { URLS, DEFAULTS, API_HEADERS } from '@env';
 
 class OllamaService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:11434') {
+  constructor(baseUrl: string = URLS.OLLAMA.DEFAULT) {
     this.baseUrl = baseUrl;
   }
 
@@ -14,18 +15,17 @@ class OllamaService {
 
   async generateResponse(request: OllamaGenerateRequest): Promise<OllamaResponse> {
     try {
-      const response = await axios.post(`${this.baseUrl}/api/generate`, {
+      const response = await axios.post(`${this.baseUrl}${URLS.OLLAMA.API.GENERATE}`, {
         ...request,
         stream: false,
       }, {
-        timeout: 30000,
+        timeout: DEFAULTS.TIMEOUTS.LONG,
         headers: {
-          'Content-Type': 'application/json',
+          [API_HEADERS.CONTENT_TYPE]: 'application/json',
         },
       });
       return response.data;
     } catch (error) {
-      console.error('Error generating response:', error);
       throw error;
     }
   }
@@ -48,7 +48,7 @@ class OllamaService {
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, 50);
+          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
         }
       };
       
@@ -71,7 +71,6 @@ class OllamaService {
       scheduleNext(processChunk);
       
     } catch (error) {
-      console.error('Error generating response:', error);
       onComplete();
       throw error;
     }
@@ -79,15 +78,14 @@ class OllamaService {
 
   async getModels(): Promise<OllamaModel[]> {
     try {
-      const response = await axios.get(`${this.baseUrl}/api/tags`, {
-        timeout: 10000,
+      const response = await axios.get(`${this.baseUrl}${URLS.OLLAMA.API.TAGS}`, {
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
-          'Content-Type': 'application/json',
+          [API_HEADERS.CONTENT_TYPE]: 'application/json',
         },
       });
       return response.data.models || [];
     } catch (error) {
-      console.error('Error fetching models:', error);
       return [];
     }
   }
@@ -95,14 +93,13 @@ class OllamaService {
   async checkConnection(): Promise<boolean> {
     try {
       await axios.get(`${this.baseUrl}/api/tags`, {
-        timeout: 10000,
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
-          'Content-Type': 'application/json',
+          [API_HEADERS.CONTENT_TYPE]: 'application/json',
         },
       });
       return true;
     } catch (error) {
-      console.error('Connection error:', error);
       return false;
     }
   }
@@ -141,7 +138,6 @@ Title:`;
 
       return title;
     } catch (error) {
-      console.error('Error generating chat title:', error);
       // Fallback: use first few words of the context
       const firstWords = conversationContext.split(' ').slice(0, 4).join(' ');
       return firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;

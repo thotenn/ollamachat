@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '@env';
 
 export interface ChatMessage {
   id: string;
@@ -116,7 +117,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
           <Ionicons 
             name="send" 
             size={20} 
-            color={inputText.trim() ? '#007AFF' : '#ccc'} 
+            color={inputText.trim() ? COLORS.PRIMARY : COLORS.BORDER.LIGHT} 
           />
         </TouchableOpacity>
       </View>
@@ -127,7 +128,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
   messagesList: {
     flex: 1,
@@ -152,28 +153,28 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   userBubble: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.PRIMARY,
   },
   botBubble: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
   },
   typingBubble: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.BACKGROUND.TYPING,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 20,
   },
   userText: {
-    color: 'white',
+    color: COLORS.TEXT.WHITE,
   },
   botText: {
-    color: '#333',
+    color: COLORS.TEXT.DARK,
   },
   typingText: {
-    color: '#666',
+    color: COLORS.TEXT.SECONDARY,
     fontStyle: 'italic',
   },
   timestamp: {
@@ -181,30 +182,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   userTimestamp: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: COLORS.TRANSPARENCY.WHITE_70,
   },
   botTimestamp: {
-    color: '#999',
+    color: COLORS.TEXT.TERTIARY,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.BACKGROUND.WHITE,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: COLORS.BORDER.DEFAULT,
   },
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
     maxHeight: 100,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BACKGROUND.LIGHT,
   },
   sendButton: {
     marginLeft: 12,

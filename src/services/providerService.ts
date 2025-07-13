@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { OllamaResponse, OllamaGenerateRequest, OllamaModel, Provider } from '../types';
+import { URLS, MODELS, PROVIDERS, DEFAULTS } from '../envs';
 
 export interface GenerateRequest {
   model: string;
@@ -53,14 +54,14 @@ class OllamaProviderService extends BaseProviderService {
         ? `${request.instructions}\n\nUser: ${request.prompt}\nAssistant:`
         : request.prompt;
 
-      const response = await axios.post(`${this.provider.baseUrl}/api/generate`, {
+      const response = await axios.post(`${this.provider.baseUrl}${URLS.OLLAMA.API.GENERATE}`, {
         model: request.model,
         prompt,
         stream: false,
         context: request.context,
         options: request.options,
       }, {
-        timeout: 30000,
+        timeout: DEFAULTS.TIMEOUTS.LONG,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -73,7 +74,6 @@ class OllamaProviderService extends BaseProviderService {
         done: response.data.done,
       };
     } catch (error) {
-      console.error('Error generating response from Ollama:', error);
       throw error;
     }
   }
@@ -94,7 +94,7 @@ class OllamaProviderService extends BaseProviderService {
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, 50);
+          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
         }
       };
       
@@ -116,7 +116,6 @@ class OllamaProviderService extends BaseProviderService {
       scheduleNext(processChunk);
       
     } catch (error) {
-      console.error('Error streaming response from Ollama:', error);
       onComplete();
       throw error;
     }
@@ -124,8 +123,8 @@ class OllamaProviderService extends BaseProviderService {
 
   async getModels(): Promise<AIModel[]> {
     try {
-      const response = await axios.get(`${this.provider.baseUrl}/api/tags`, {
-        timeout: 10000,
+      const response = await axios.get(`${this.provider.baseUrl}${URLS.OLLAMA.API.TAGS}`, {
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -138,22 +137,20 @@ class OllamaProviderService extends BaseProviderService {
         modified_at: model.modified_at,
       }));
     } catch (error) {
-      console.error('Error fetching models from Ollama:', error);
       return [];
     }
   }
 
   async checkConnection(): Promise<boolean> {
     try {
-      await axios.get(`${this.provider.baseUrl}/api/tags`, {
-        timeout: 10000,
+      await axios.get(`${this.provider.baseUrl}${URLS.OLLAMA.API.TAGS}`, {
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
           'Content-Type': 'application/json',
         },
       });
       return true;
     } catch (error) {
-      console.error('Ollama connection error:', error);
       return false;
     }
   }
@@ -163,7 +160,7 @@ class AnthropicProviderService extends BaseProviderService {
   private getApiUrl(endpoint: string): string {
     // If using CORS proxy (localhost), use /proxy prefix
     if (this.provider.baseUrl.includes('localhost')) {
-      return `${this.provider.baseUrl}/proxy${endpoint}`;
+      return `${this.provider.baseUrl}${URLS.PROXY_PREFIX}${endpoint}`;
     }
     // If using direct API, add /v1 prefix
     return `${this.provider.baseUrl}/v1${endpoint}`;
@@ -184,26 +181,23 @@ class AnthropicProviderService extends BaseProviderService {
 
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
-        console.log(`Adding ${request.messageHistory.length} messages to context`);
         messages.push(...request.messageHistory);
       }
 
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
 
-      console.log(`Sending ${messages.length} messages to Anthropic API`);
-
       const response = await axios.post(this.getApiUrl('/messages'), {
         model: request.model,
-        max_tokens: 4096,
+        max_tokens: DEFAULTS.LIMITS.MAX_TOKENS,
         messages,
         temperature: request.options?.temperature || 0.7,
       }, {
-        timeout: 30000,
+        timeout: DEFAULTS.TIMEOUTS.LONG,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': this.provider.apiKey,
-          'anthropic-version': '2023-06-01',
+          'anthropic-version': URLS.ANTHROPIC.API_VERSION,
           'anthropic-dangerous-direct-browser-access': 'true',
         },
       });
@@ -214,7 +208,6 @@ class AnthropicProviderService extends BaseProviderService {
         done: true,
       };
     } catch (error) {
-      console.error('Error generating response from Anthropic:', error);
       throw error;
     }
   }
@@ -235,7 +228,7 @@ class AnthropicProviderService extends BaseProviderService {
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, 50);
+          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
         }
       };
       
@@ -257,7 +250,6 @@ class AnthropicProviderService extends BaseProviderService {
       scheduleNext(processChunk);
       
     } catch (error) {
-      console.error('Error streaming response from Anthropic:', error);
       onComplete();
       throw error;
     }
@@ -266,39 +258,33 @@ class AnthropicProviderService extends BaseProviderService {
   async getModels(): Promise<AIModel[]> {
     try {
       if (!this.provider.apiKey) {
-        console.log('No API key provided, returning extended default models');
         return this.getExtendedDefaultModels();
       }
 
       // Test API key validity by making a small request
       await axios.post(this.getApiUrl('/messages'), {
-        model: 'claude-3-haiku-20240307',
+        model: MODELS.ANTHROPIC.CLAUDE_3_HAIKU,
         max_tokens: 1,
         messages: [{ role: 'user', content: 'test' }],
       }, {
-        timeout: 5000,
+        timeout: DEFAULTS.TIMEOUTS.SHORT,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': this.provider.apiKey,
-          'anthropic-version': '2023-06-01',
+          'anthropic-version': URLS.ANTHROPIC.API_VERSION,
           'anthropic-dangerous-direct-browser-access': 'true',
         },
       });
 
       // If API key is valid, return extended model list
-      console.log('API key validated, returning extended model list');
       return this.getExtendedDefaultModels();
     } catch (error: any) {
-      console.error('Error validating Anthropic API key:', error?.response?.status || error.message);
-      
       // If it's an auth error, return basic models with a note
       if (error?.response?.status === 401 || error?.response?.status === 403) {
-        console.log('Invalid API key, returning basic models only');
         return this.getBasicDefaultModels();
       }
 
       // For other errors (like rate limits), still return extended models
-      console.log('API temporarily unavailable, returning extended models');
       return this.getExtendedDefaultModels();
     }
   }
@@ -306,37 +292,37 @@ class AnthropicProviderService extends BaseProviderService {
 private getBasicDefaultModels(): AIModel[] {
     return [
       // Latest and most capable models for basic usage
-      { name: 'claude-sonnet-4-20250514', displayName: 'Claude 4 Sonnet (Latest)' },
-      { name: 'claude-3-7-sonnet-20250219', displayName: 'Claude 3.7 Sonnet' },
-      { name: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet' },
-      { name: 'claude-3-5-haiku-20241022', displayName: 'Claude 3.5 Haiku' },
-      { name: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku' },
+      { name: MODELS.ANTHROPIC.CLAUDE_SONNET_4, displayName: 'Claude 4 Sonnet (Latest)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_7_SONNET, displayName: 'Claude 3.7 Sonnet' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_5_SONNET, displayName: 'Claude 3.5 Sonnet' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_5_HAIKU, displayName: 'Claude 3.5 Haiku' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_HAIKU, displayName: 'Claude 3 Haiku' },
     ];
   }
 
   private getExtendedDefaultModels(): AIModel[] {
     return [
       // Claude 4 Models (Most Advanced - May 2025)
-      { name: 'claude-opus-4-20250514', displayName: 'Claude 4 Opus (Most Powerful)' },
-      { name: 'claude-sonnet-4-20250514', displayName: 'Claude 4 Sonnet (Balanced)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_OPUS_4, displayName: 'Claude 4 Opus (Most Powerful)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_SONNET_4, displayName: 'Claude 4 Sonnet (Balanced)' },
       
       // Claude 3.7 Models (Advanced Reasoning - Feb 2025)
-      { name: 'claude-3-7-sonnet-20250219', displayName: 'Claude 3.7 Sonnet (Extended Thinking)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_7_SONNET, displayName: 'Claude 3.7 Sonnet (Extended Thinking)' },
       
       // Claude 3.5 Models (Oct 2024)
-      { name: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet (Latest)' },
-      { name: 'claude-3-5-haiku-20241022', displayName: 'Claude 3.5 Haiku (Fast & Smart)' },
-      { name: 'claude-3-5-sonnet-20240620', displayName: 'Claude 3.5 Sonnet (June)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_5_SONNET, displayName: 'Claude 3.5 Sonnet (Latest)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_5_HAIKU, displayName: 'Claude 3.5 Haiku (Fast & Smart)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_5_SONNET_JUNE, displayName: 'Claude 3.5 Sonnet (June)' },
       
       // Claude 3 Models (Mar 2024)
-      { name: 'claude-3-opus-20240229', displayName: 'Claude 3 Opus (Most Capable)' },
-      { name: 'claude-3-sonnet-20240229', displayName: 'Claude 3 Sonnet (Balanced)' },
-      { name: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku (Fast)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_OPUS, displayName: 'Claude 3 Opus (Most Capable)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_SONNET, displayName: 'Claude 3 Sonnet (Balanced)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_3_HAIKU, displayName: 'Claude 3 Haiku (Fast)' },
       
       // Legacy Models (For compatibility)
-      { name: 'claude-instant-1.2', displayName: 'Claude Instant 1.2 (Legacy)' },
-      { name: 'claude-2.1', displayName: 'Claude 2.1 (Legacy)' },
-      { name: 'claude-2.0', displayName: 'Claude 2.0 (Legacy)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_INSTANT_1_2, displayName: 'Claude Instant 1.2 (Legacy)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_2_1, displayName: 'Claude 2.1 (Legacy)' },
+      { name: MODELS.ANTHROPIC.CLAUDE_2_0, displayName: 'Claude 2.0 (Legacy)' },
     ];
   }
 
@@ -348,22 +334,21 @@ private getBasicDefaultModels(): AIModel[] {
 
       // Test with a simple request
       await axios.post(this.getApiUrl('/messages'), {
-        model: 'claude-3-haiku-20240307',
+        model: MODELS.ANTHROPIC.CLAUDE_3_HAIKU,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hello' }],
       }, {
-        timeout: 10000,
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': this.provider.apiKey,
-          'anthropic-version': '2023-06-01',
+          'anthropic-version': URLS.ANTHROPIC.API_VERSION,
           'anthropic-dangerous-direct-browser-access': 'true',
         },
       });
       
       return true;
     } catch (error) {
-      console.error('Anthropic connection error:', error);
       return false;
     }
   }
@@ -373,7 +358,7 @@ class OpenAIProviderService extends BaseProviderService {
   private getApiUrl(endpoint: string): string {
     // If using CORS proxy (localhost), use /proxy prefix
     if (this.provider.baseUrl.includes('localhost')) {
-      return `${this.provider.baseUrl}/proxy${endpoint}`;
+      return `${this.provider.baseUrl}${URLS.PROXY_PREFIX}${endpoint}`;
     }
     // If using direct API, add /v1 prefix
     return `${this.provider.baseUrl}/v1${endpoint}`;
@@ -395,7 +380,7 @@ class OpenAIProviderService extends BaseProviderService {
         model: request.model,
         messages,
         temperature: request.options?.temperature || 0.7,
-        max_tokens: 4096,
+        max_tokens: DEFAULTS.LIMITS.MAX_TOKENS,
       }, {
         timeout: 30000,
         headers: {
@@ -410,7 +395,6 @@ class OpenAIProviderService extends BaseProviderService {
         done: true,
       };
     } catch (error) {
-      console.error('Error generating response from OpenAI:', error);
       throw error;
     }
   }
@@ -431,7 +415,7 @@ class OpenAIProviderService extends BaseProviderService {
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, 50);
+          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
         }
       };
       
@@ -453,7 +437,6 @@ class OpenAIProviderService extends BaseProviderService {
       scheduleNext(processChunk);
       
     } catch (error) {
-      console.error('Error streaming response from OpenAI:', error);
       onComplete();
       throw error;
     }
@@ -466,7 +449,7 @@ class OpenAIProviderService extends BaseProviderService {
       }
 
       const response = await axios.get(this.getApiUrl('/models'), {
-        timeout: 10000,
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
           'Authorization': `Bearer ${this.provider.apiKey}`,
         },
@@ -479,11 +462,10 @@ class OpenAIProviderService extends BaseProviderService {
           displayName: model.id,
         }));
     } catch (error) {
-      console.error('Error fetching models from OpenAI:', error);
       return [
-        { name: 'gpt-3.5-turbo', displayName: 'GPT-3.5 Turbo' },
-        { name: 'gpt-4', displayName: 'GPT-4' },
-        { name: 'gpt-4-turbo', displayName: 'GPT-4 Turbo' },
+        { name: MODELS.OPENAI.GPT_3_5_TURBO, displayName: 'GPT-3.5 Turbo' },
+        { name: MODELS.OPENAI.GPT_4, displayName: 'GPT-4' },
+        { name: MODELS.OPENAI.GPT_4_TURBO, displayName: 'GPT-4 Turbo' },
       ];
     }
   }
@@ -495,7 +477,7 @@ class OpenAIProviderService extends BaseProviderService {
       }
 
       await axios.get(this.getApiUrl('/models'), {
-        timeout: 10000,
+        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
         headers: {
           'Authorization': `Bearer ${this.provider.apiKey}`,
         },
@@ -503,7 +485,6 @@ class OpenAIProviderService extends BaseProviderService {
       
       return true;
     } catch (error) {
-      console.error('OpenAI connection error:', error);
       return false;
     }
   }
@@ -516,7 +497,7 @@ class GeminiProviderService extends BaseProviderService {
       return `${this.provider.baseUrl}${endpoint}`;
     }
     // If using direct API, add /v1beta prefix
-    return `${this.provider.baseUrl}/v1beta${endpoint}`;
+    return `${this.provider.baseUrl}${URLS.GEMINI.API_PREFIX}${endpoint}`;
   }
 
   async generateResponse(request: GenerateRequest): Promise<GenerateResponse> {
@@ -537,11 +518,11 @@ class GeminiProviderService extends BaseProviderService {
           }],
           generationConfig: {
             temperature: request.options?.temperature || 0.7,
-            maxOutputTokens: 4096,
+            maxOutputTokens: DEFAULTS.LIMITS.MAX_TOKENS,
           }
         },
         {
-          timeout: 30000,
+          timeout: DEFAULTS.TIMEOUTS.LONG,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -554,7 +535,6 @@ class GeminiProviderService extends BaseProviderService {
         done: true,
       };
     } catch (error) {
-      console.error('Error generating response from Gemini:', error);
       throw error;
     }
   }
@@ -575,7 +555,7 @@ class GeminiProviderService extends BaseProviderService {
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, 50);
+          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
         }
       };
       
@@ -597,7 +577,6 @@ class GeminiProviderService extends BaseProviderService {
       scheduleNext(processChunk);
       
     } catch (error) {
-      console.error('Error streaming response from Gemini:', error);
       onComplete();
       throw error;
     }
@@ -606,10 +585,10 @@ class GeminiProviderService extends BaseProviderService {
   async getModels(): Promise<AIModel[]> {
     // Gemini models are static for now
     return [
-      { name: 'gemini-pro', displayName: 'Gemini Pro' },
-      { name: 'gemini-pro-vision', displayName: 'Gemini Pro Vision' },
-      { name: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro' },
-      { name: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash' },
+      { name: MODELS.GEMINI.PRO, displayName: 'Gemini Pro' },
+      { name: MODELS.GEMINI.PRO_VISION, displayName: 'Gemini Pro Vision' },
+      { name: MODELS.GEMINI.PRO_1_5, displayName: 'Gemini 1.5 Pro' },
+      { name: MODELS.GEMINI.FLASH_1_5, displayName: 'Gemini 1.5 Flash' },
     ];
   }
 
@@ -621,7 +600,7 @@ class GeminiProviderService extends BaseProviderService {
 
       // Test with a simple request
       await axios.post(
-        `${this.getApiUrl('/models/gemini-pro:generateContent')}?key=${this.provider.apiKey}`,
+        `${this.getApiUrl(`/models/${MODELS.GEMINI.PRO}:generateContent`)}?key=${this.provider.apiKey}`,
         {
           contents: [{
             parts: [{ text: 'Hello' }]
@@ -631,7 +610,7 @@ class GeminiProviderService extends BaseProviderService {
           }
         },
         {
-          timeout: 10000,
+          timeout: DEFAULTS.TIMEOUTS.MEDIUM,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -640,7 +619,6 @@ class GeminiProviderService extends BaseProviderService {
       
       return true;
     } catch (error) {
-      console.error('Gemini connection error:', error);
       return false;
     }
   }
@@ -661,16 +639,16 @@ export class ProviderService {
     let service: BaseProviderService;
 
     switch (provider.type) {
-      case 'ollama':
+      case PROVIDERS.TYPES.OLLAMA:
         service = new OllamaProviderService(provider);
         break;
-      case 'anthropic':
+      case PROVIDERS.TYPES.ANTHROPIC:
         service = new AnthropicProviderService(provider);
         break;
-      case 'openai':
+      case PROVIDERS.TYPES.OPENAI:
         service = new OpenAIProviderService(provider);
         break;
-      case 'gemini':
+      case PROVIDERS.TYPES.GEMINI:
         service = new GeminiProviderService(provider);
         break;
       default:
@@ -755,7 +733,6 @@ Title:`;
 
       return title;
     } catch (error) {
-      console.error('Error generating chat title:', error);
       // Fallback: use first few words of the context
       const firstWords = conversationContext.split(' ').slice(0, 4).join(' ');
       return firstWords.length > 30 ? firstWords.substring(0, 27) + '...' : firstWords;

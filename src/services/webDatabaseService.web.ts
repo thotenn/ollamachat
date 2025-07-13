@@ -1,6 +1,8 @@
 import initSqlJs, { Database } from 'sql.js';
 import { DatabaseAdapter, DatabaseRow } from './databaseAdapter';
 import { ChatConversation, ChatMessageDB, ChatMessage, Provider, Assistant } from '../types';
+import { ProviderType } from '../envs/providers';
+import { URLS, DATABASE, STORAGE_KEYS, DEFAULTS, PROVIDERS } from '@env';
 
 class WebDatabaseService implements DatabaseAdapter {
   private db: Database | null = null;
@@ -9,32 +11,24 @@ class WebDatabaseService implements DatabaseAdapter {
   async initDatabase(): Promise<void> {
     try {
       if (this.db) {
-        console.log('Web database already initialized');
         return;
       }
-
-      console.log('Initializing web database with SQL.js...');
       
       // Initialize SQL.js
       this.SQL = await initSqlJs({
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+        locateFile: (file: string) => `${URLS.SQL_JS.CDN}/${file}`
       });
 
       // Try to load existing database from IndexedDB
       const savedData = await this.loadFromIndexedDB();
       
       if (savedData) {
-        console.log('Loading existing database from IndexedDB');
         this.db = new this.SQL.Database(savedData);
       } else {
-        console.log('Creating new database');
         this.db = new this.SQL.Database();
         await this.createTables();
       }
-
-      console.log('Web database initialized successfully');
     } catch (error) {
-      console.error('Error initializing web database:', error);
       this.db = null;
       throw error;
     }
@@ -44,7 +38,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS providers (
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.PROVIDERS} (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
@@ -57,7 +51,7 @@ class WebDatabaseService implements DatabaseAdapter {
     `);
 
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS assistants (
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.ASSISTANTS} (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT NOT NULL,
@@ -69,7 +63,7 @@ class WebDatabaseService implements DatabaseAdapter {
     `);
 
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS conversations (
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.CONVERSATIONS} (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         created_at TEXT NOT NULL,
@@ -78,26 +72,26 @@ class WebDatabaseService implements DatabaseAdapter {
         provider_id TEXT NOT NULL,
         assistant_id TEXT NOT NULL,
         context TEXT,
-        FOREIGN KEY (provider_id) REFERENCES providers (id),
-        FOREIGN KEY (assistant_id) REFERENCES assistants (id)
+        FOREIGN KEY (provider_id) REFERENCES ${DATABASE.TABLES.PROVIDERS} (id),
+        FOREIGN KEY (assistant_id) REFERENCES ${DATABASE.TABLES.ASSISTANTS} (id)
       );
     `);
 
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
+      CREATE TABLE IF NOT EXISTS ${DATABASE.TABLES.MESSAGES} (
         id TEXT PRIMARY KEY,
         conversation_id TEXT NOT NULL,
         text TEXT NOT NULL,
         is_user INTEGER NOT NULL,
         timestamp TEXT NOT NULL,
         message_order INTEGER NOT NULL,
-        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE
+        FOREIGN KEY (conversation_id) REFERENCES ${DATABASE.TABLES.CONVERSATIONS} (id) ON DELETE CASCADE
       );
     `);
 
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_order 
-      ON messages (conversation_id, message_order);
+      ON ${DATABASE.TABLES.MESSAGES} (conversation_id, message_order);
     `);
 
     // Initialize default data
@@ -110,16 +104,16 @@ class WebDatabaseService implements DatabaseAdapter {
   private getProviderBaseUrl(type: string): string {
     // For web development, use CORS proxy
     switch (type) {
-      case 'ollama':
-        return 'http://localhost:11434';
-      case 'anthropic':
-        return 'http://localhost:8010'; // CORS proxy
-      case 'openai':
-        return 'http://localhost:8011'; // CORS proxy
-      case 'gemini':
-        return 'http://localhost:8012'; // CORS proxy
+      case PROVIDERS.TYPES.OLLAMA:
+        return URLS.OLLAMA.DEFAULT;
+      case PROVIDERS.TYPES.ANTHROPIC:
+        return URLS.ANTHROPIC.CORS_PROXY;
+      case PROVIDERS.TYPES.OPENAI:
+        return URLS.OPENAI.CORS_PROXY;
+      case PROVIDERS.TYPES.GEMINI:
+        return URLS.GEMINI.CORS_PROXY;
       default:
-        return 'http://localhost:11434';
+        return URLS.OLLAMA.DEFAULT;
     }
   }
 
@@ -129,64 +123,64 @@ class WebDatabaseService implements DatabaseAdapter {
     const now = new Date().toISOString();
 
     // Check if we already have providers
-    const existingProviders = this.db.exec('SELECT COUNT(*) as count FROM providers');
+    const existingProviders = this.db.exec(`SELECT COUNT(*) as count FROM ${DATABASE.TABLES.PROVIDERS}`);
     
     if (existingProviders[0]?.values[0]?.[0] === 0) {
       // Create default providers
       const defaultProviders = [
         {
-          id: 'ollama-default',
-          name: 'Ollama',
-          type: 'ollama',
-          baseUrl: this.getProviderBaseUrl('ollama'),
+          id: PROVIDERS.IDS.OLLAMA,
+          name: PROVIDERS.NAMES.OLLAMA,
+          type: PROVIDERS.TYPES.OLLAMA,
+          baseUrl: this.getProviderBaseUrl(PROVIDERS.TYPES.OLLAMA),
           isDefault: true,
         },
         {
-          id: 'anthropic-default',
-          name: 'Anthropic',
-          type: 'anthropic',
-          baseUrl: this.getProviderBaseUrl('anthropic'),
+          id: PROVIDERS.IDS.ANTHROPIC,
+          name: PROVIDERS.NAMES.ANTHROPIC,
+          type: PROVIDERS.TYPES.ANTHROPIC,
+          baseUrl: this.getProviderBaseUrl(PROVIDERS.TYPES.ANTHROPIC),
           isDefault: false,
         },
         {
-          id: 'openai-default',
-          name: 'OpenAI',
-          type: 'openai',
-          baseUrl: this.getProviderBaseUrl('openai'),
+          id: PROVIDERS.IDS.OPENAI,
+          name: PROVIDERS.NAMES.OPENAI,
+          type: PROVIDERS.TYPES.OPENAI,
+          baseUrl: this.getProviderBaseUrl(PROVIDERS.TYPES.OPENAI),
           isDefault: false,
         },
         {
-          id: 'gemini-default',
-          name: 'Google Gemini',
-          type: 'gemini',
-          baseUrl: this.getProviderBaseUrl('gemini'),
+          id: PROVIDERS.IDS.GEMINI,
+          name: PROVIDERS.NAMES.GEMINI,
+          type: PROVIDERS.TYPES.GEMINI,
+          baseUrl: this.getProviderBaseUrl(PROVIDERS.TYPES.GEMINI),
           isDefault: false,
         },
       ];
 
       for (const provider of defaultProviders) {
         this.db.exec(
-          'INSERT INTO providers (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          `INSERT INTO ${DATABASE.TABLES.PROVIDERS} (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
         );
       }
     }
 
     // Check if we already have assistants
-    const existingAssistants = this.db.exec('SELECT COUNT(*) as count FROM assistants');
+    const existingAssistants = this.db.exec(`SELECT COUNT(*) as count FROM ${DATABASE.TABLES.ASSISTANTS}`);
     
     if (existingAssistants[0]?.values[0]?.[0] === 0) {
       // Create default assistant
       const defaultAssistant = {
-        id: 'default-assistant',
-        name: 'Asistente General',
-        description: 'Asistente de propósito general para conversaciones',
-        instructions: 'Eres un asistente útil y amigable. Responde de manera clara y concisa a las preguntas del usuario.',
+        id: DEFAULTS.ASSISTANT.ID,
+        name: DEFAULTS.ASSISTANT.NAME,
+        description: DEFAULTS.ASSISTANT.DESCRIPTION,
+        instructions: DEFAULTS.ASSISTANT.INSTRUCTIONS,
         isDefault: true,
       };
 
       this.db.exec(
-        'INSERT INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        `INSERT INTO ${DATABASE.TABLES.ASSISTANTS} (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [defaultAssistant.id, defaultAssistant.name, defaultAssistant.description, defaultAssistant.instructions, 1, now, now]
       );
     }
@@ -197,45 +191,45 @@ class WebDatabaseService implements DatabaseAdapter {
 
     try {
       const data = this.db.export();
-      const request = indexedDB.open('ollamachat_db', 1);
+      const request = indexedDB.open(DATABASE.INDEXEDDB.NAME, 1);
       
       return new Promise((resolve, reject) => {
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {
           const db = request.result;
-          const transaction = db.transaction(['database'], 'readwrite');
-          const store = transaction.objectStore('database');
+          const transaction = db.transaction([DATABASE.TABLES.DATABASE], 'readwrite');
+          const store = transaction.objectStore(DATABASE.TABLES.DATABASE);
           store.put(data, 'sqlitedb');
           transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(transaction.error);
         };
         request.onupgradeneeded = () => {
           const db = request.result;
-          if (!db.objectStoreNames.contains('database')) {
-            db.createObjectStore('database');
+          if (!db.objectStoreNames.contains(DATABASE.TABLES.DATABASE || 'database')) {
+            db.createObjectStore(DATABASE.TABLES.DATABASE || 'database');
           }
         };
       });
     } catch (error) {
-      console.error('Error saving to IndexedDB:', error);
+      // Error saving to IndexedDB
     }
   }
 
   private async loadFromIndexedDB(): Promise<Uint8Array | null> {
     try {
-      const request = indexedDB.open('ollamachat_db', 1);
+      const request = indexedDB.open(DATABASE.INDEXEDDB.NAME, 1);
       
       return new Promise((resolve, reject) => {
         request.onerror = () => resolve(null); // Return null if DB doesn't exist
         request.onsuccess = () => {
           const db = request.result;
-          if (!db.objectStoreNames.contains('database')) {
+          if (!db.objectStoreNames.contains(DATABASE.TABLES.DATABASE)) {
             resolve(null);
             return;
           }
           
-          const transaction = db.transaction(['database'], 'readonly');
-          const store = transaction.objectStore('database');
+          const transaction = db.transaction([DATABASE.TABLES.DATABASE], 'readonly');
+          const store = transaction.objectStore(DATABASE.TABLES.DATABASE);
           const getRequest = store.get('sqlitedb');
           
           getRequest.onsuccess = () => {
@@ -245,14 +239,13 @@ class WebDatabaseService implements DatabaseAdapter {
         };
         request.onupgradeneeded = () => {
           const db = request.result;
-          if (!db.objectStoreNames.contains('database')) {
-            db.createObjectStore('database');
+          if (!db.objectStoreNames.contains(DATABASE.TABLES.DATABASE)) {
+            db.createObjectStore(DATABASE.TABLES.DATABASE);
           }
           resolve(null);
         };
       });
     } catch (error) {
-      console.error('Error loading from IndexedDB:', error);
       return null;
     }
   }
@@ -263,7 +256,7 @@ class WebDatabaseService implements DatabaseAdapter {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     
     this.db.run(
-      'INSERT INTO conversations (id, title, created_at, updated_at, model, provider_id, assistant_id, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO ${DATABASE.TABLES.CONVERSATIONS} (id, title, created_at, updated_at, model, provider_id, assistant_id, context) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, conversation.title, conversation.createdAt, conversation.updatedAt, conversation.model, conversation.providerId, conversation.assistantId, conversation.context || null]
     );
 
@@ -297,7 +290,7 @@ class WebDatabaseService implements DatabaseAdapter {
     values.push(id);
     
     this.db.run(
-      `UPDATE conversations SET ${fields.join(', ')} WHERE id = ?`,
+      `UPDATE ${DATABASE.TABLES.CONVERSATIONS} SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
 
@@ -308,7 +301,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     this.db.run(
-      'INSERT INTO messages (id, conversation_id, text, is_user, timestamp, message_order) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO ${DATABASE.TABLES.MESSAGES} (id, conversation_id, text, is_user, timestamp, message_order) VALUES (?, ?, ?, ?, ?, ?)`,
       [message.id, message.conversationId, message.text, message.isUser ? 1 : 0, message.timestamp, message.order]
     );
 
@@ -317,17 +310,15 @@ class WebDatabaseService implements DatabaseAdapter {
 
   async getConversations(): Promise<ChatConversation[]> {
     if (!this.db) {
-      console.log('Web database not initialized, attempting to reinitialize...');
       try {
         await this.initDatabase();
       } catch (error) {
-        console.error('Failed to reinitialize web database:', error);
         return [];
       }
     }
 
     try {
-      const stmt = this.db!.prepare('SELECT * FROM conversations ORDER BY updated_at DESC');
+      const stmt = this.db!.prepare(`SELECT * FROM ${DATABASE.TABLES.CONVERSATIONS} ORDER BY updated_at DESC`);
       const result: DatabaseRow[] = [];
       
       while (stmt.step()) {
@@ -347,7 +338,6 @@ class WebDatabaseService implements DatabaseAdapter {
         context: row.context as string,
       }));
     } catch (error) {
-      console.error('Error in web getConversations:', error);
       return [];
     }
   }
@@ -356,7 +346,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const stmt = this.db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY message_order DESC');
+      const stmt = this.db.prepare(`SELECT * FROM ${DATABASE.TABLES.MESSAGES} WHERE conversation_id = ? ORDER BY message_order DESC`);
       stmt.bind([conversationId]);
       
       const result: DatabaseRow[] = [];
@@ -373,7 +363,6 @@ class WebDatabaseService implements DatabaseAdapter {
         isUser: (row.is_user as number) === 1,
       }));
     } catch (error) {
-      console.error('Error in web getConversationMessages:', error);
       return [];
     }
   }
@@ -381,8 +370,8 @@ class WebDatabaseService implements DatabaseAdapter {
   async deleteConversation(conversationId: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    this.db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId]);
-    this.db.run('DELETE FROM conversations WHERE id = ?', [conversationId]);
+    this.db.run(`DELETE FROM ${DATABASE.TABLES.MESSAGES} WHERE conversation_id = ?`, [conversationId]);
+    this.db.run(`DELETE FROM ${DATABASE.TABLES.CONVERSATIONS} WHERE id = ?`, [conversationId]);
     
     await this.saveToIndexedDB();
   }
@@ -391,7 +380,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const stmt = this.db.prepare('SELECT * FROM conversations WHERE id = ?');
+      const stmt = this.db.prepare(`SELECT * FROM ${DATABASE.TABLES.CONVERSATIONS} WHERE id = ?`);
       stmt.bind([conversationId]);
       
       if (stmt.step()) {
@@ -413,7 +402,6 @@ class WebDatabaseService implements DatabaseAdapter {
       stmt.free();
       return null;
     } catch (error) {
-      console.error('Error in web getConversationById:', error);
       return null;
     }
   }
@@ -422,7 +410,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const stmt = this.db.prepare('SELECT COUNT(*) as count FROM messages WHERE conversation_id = ?');
+      const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM ${DATABASE.TABLES.MESSAGES} WHERE conversation_id = ?`);
       stmt.bind([conversationId]);
       
       if (stmt.step()) {
@@ -434,7 +422,6 @@ class WebDatabaseService implements DatabaseAdapter {
       stmt.free();
       return 0;
     } catch (error) {
-      console.error('Error in web getMessageCount:', error);
       return 0;
     }
   }
@@ -443,7 +430,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const stmt = this.db.prepare('SELECT text FROM messages WHERE conversation_id = ? AND is_user = 1 ORDER BY message_order ASC LIMIT ?');
+      const stmt = this.db.prepare(`SELECT text FROM ${DATABASE.TABLES.MESSAGES} WHERE conversation_id = ? AND is_user = 1 ORDER BY message_order ASC LIMIT ?`);
       stmt.bind([conversationId, limit]);
       
       const result: string[] = [];
@@ -455,7 +442,6 @@ class WebDatabaseService implements DatabaseAdapter {
 
       return result;
     } catch (error) {
-      console.error('Error in web getUserMessages:', error);
       return [];
     }
   }
@@ -463,8 +449,8 @@ class WebDatabaseService implements DatabaseAdapter {
   async clearAllData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    this.db.run('DELETE FROM messages');
-    this.db.run('DELETE FROM conversations');
+    this.db.run(`DELETE FROM ${DATABASE.TABLES.MESSAGES}`);
+    this.db.run(`DELETE FROM ${DATABASE.TABLES.CONVERSATIONS}`);
     
     await this.saveToIndexedDB();
   }
@@ -474,7 +460,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const result = this.db.exec('SELECT * FROM providers ORDER BY is_default DESC, name ASC');
+      const result = this.db.exec(`SELECT * FROM ${DATABASE.TABLES.PROVIDERS} ORDER BY is_default DESC, name ASC`);
       
       if (!result || result.length === 0) return [];
 
@@ -490,7 +476,7 @@ class WebDatabaseService implements DatabaseAdapter {
         return {
           id: provider.id,
           name: provider.name,
-          type: provider.type as 'ollama' | 'anthropic' | 'openai' | 'gemini',
+          type: provider.type as ProviderType,
           baseUrl: provider.base_url,
           apiKey: provider.api_key,
           isDefault: provider.is_default === 1,
@@ -499,7 +485,6 @@ class WebDatabaseService implements DatabaseAdapter {
         };
       });
     } catch (error) {
-      console.error('Error in getProviders:', error);
       return [];
     }
   }
@@ -528,7 +513,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (updates.isDefault !== undefined) {
       // First, remove default from all providers if setting a new default
       if (updates.isDefault) {
-        this.db.run('UPDATE providers SET is_default = 0');
+        this.db.run(`UPDATE ${DATABASE.TABLES.PROVIDERS} SET is_default = 0`);
       }
       fields.push('is_default = ?');
       values.push(updates.isDefault ? 1 : 0);
@@ -541,7 +526,7 @@ class WebDatabaseService implements DatabaseAdapter {
     values.push(id);
     
     this.db.run(
-      `UPDATE providers SET ${fields.join(', ')} WHERE id = ?`,
+      `UPDATE ${DATABASE.TABLES.PROVIDERS} SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
 
@@ -553,7 +538,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const result = this.db.exec('SELECT * FROM assistants ORDER BY is_default DESC, name ASC');
+      const result = this.db.exec(`SELECT * FROM ${DATABASE.TABLES.ASSISTANTS} ORDER BY is_default DESC, name ASC`);
       
       if (!result || result.length === 0) return [];
 
@@ -577,7 +562,6 @@ class WebDatabaseService implements DatabaseAdapter {
         };
       });
     } catch (error) {
-      console.error('Error in getAssistants:', error);
       return [];
     }
   }
@@ -590,11 +574,11 @@ class WebDatabaseService implements DatabaseAdapter {
 
     // If setting as default, remove default from all others
     if (assistant.isDefault) {
-      this.db.run('UPDATE assistants SET is_default = 0');
+      this.db.run(`UPDATE ${DATABASE.TABLES.ASSISTANTS} SET is_default = 0`);
     }
     
     this.db.run(
-      'INSERT INTO assistants (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO ${DATABASE.TABLES.ASSISTANTS} (id, name, description, instructions, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [id, assistant.name, assistant.description, assistant.instructions, assistant.isDefault ? 1 : 0, now, now]
     );
 
@@ -626,7 +610,7 @@ class WebDatabaseService implements DatabaseAdapter {
     if (updates.isDefault !== undefined) {
       // First, remove default from all assistants if setting a new default
       if (updates.isDefault) {
-        this.db.run('UPDATE assistants SET is_default = 0');
+        this.db.run(`UPDATE ${DATABASE.TABLES.ASSISTANTS} SET is_default = 0`);
       }
       fields.push('is_default = ?');
       values.push(updates.isDefault ? 1 : 0);
@@ -639,7 +623,7 @@ class WebDatabaseService implements DatabaseAdapter {
     values.push(id);
     
     this.db.run(
-      `UPDATE assistants SET ${fields.join(', ')} WHERE id = ?`,
+      `UPDATE ${DATABASE.TABLES.ASSISTANTS} SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
 
@@ -649,7 +633,7 @@ class WebDatabaseService implements DatabaseAdapter {
   async deleteAssistant(id: string): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    this.db.run('DELETE FROM assistants WHERE id = ?', [id]);
+    this.db.run(`DELETE FROM ${DATABASE.TABLES.ASSISTANTS} WHERE id = ?`, [id]);
     await this.saveToIndexedDB();
   }
 }
