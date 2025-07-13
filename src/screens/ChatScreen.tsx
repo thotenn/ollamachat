@@ -407,7 +407,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         onSendMessage={handleSendMessage}
         isTyping={isTyping}
         placeholder="Escribe un mensaje..."
-        disabled={!isConnected}
+        disabled={!isConnected || isTyping}
       />
 
       {/* Assistant Selection Modal */}

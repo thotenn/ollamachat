@@ -126,7 +126,8 @@ const CustomChat: React.FC<CustomChatProps> = ({
           behavior="padding"
           keyboardVerticalOffset={90}
         >
-          <ChatContent 
+          <ChatContent
+            isTyping={isTyping}
             disabled={disabled}
             flatListRef={flatListRef}
             messages={messages}
@@ -141,7 +142,8 @@ const CustomChat: React.FC<CustomChatProps> = ({
         </KeyboardAvoidingView>
       ) : (
         <View style={[styles.container, styles.androidContainer]}>
-          <ChatContent 
+          <ChatContent
+            isTyping={isTyping}
             disabled={disabled}
             flatListRef={flatListRef}
             messages={messages}
@@ -160,6 +162,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
 };
 
 const ChatContent: React.FC<{
+  isTyping?: boolean;
   disabled: boolean;
   flatListRef: React.RefObject<FlatList | null>;
   messages: ChatMessage[];
@@ -171,6 +174,7 @@ const ChatContent: React.FC<{
   handleInputFocus: () => void;
   placeholder: string;
 }> = ({
+  isTyping = false,
   disabled,
   flatListRef,
   messages,
@@ -207,7 +211,7 @@ const ChatContent: React.FC<{
           style={[styles.textInput, disabled && styles.textInputDisabled]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={disabled ? "Conecta con un proveedor de IA para enviar mensajes" : placeholder}
+          placeholder={disabled ? (isTyping ? "Answering..." : "Conecta con un proveedor de IA para enviar mensajes") : placeholder}
           multiline
           maxLength={1000}
           onSubmitEditing={handleSend}
