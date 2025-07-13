@@ -43,3 +43,4 @@ ios/
 # Android (ignore directory but keep specific file)
 android/
 !android/app/src/main/res/xml/network_security_config.xml
+!android/app/src/main/AndroidManifest.xml
