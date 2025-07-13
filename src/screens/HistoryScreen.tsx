@@ -168,10 +168,14 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
   return (
     <SafeAreaView style={COMMON_STYLES.screenContainer}>
       <View style={COMMON_STYLES.header}>
-        <Text style={TYPOGRAPHY.HEADER_TITLE}>Chat History</Text>
-        <Text style={TYPOGRAPHY.HEADER_SUBTITLE}>
-          {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
-        </Text>
+        <View style={COMMON_STYLES.headerLeft}>
+          <Text style={TYPOGRAPHY.HEADER_TITLE}>Chat History</Text>
+        </View>
+        <View style={COMMON_STYLES.headerRight}>
+          <View style={COMMON_STYLES.badge}>
+            <Text style={createTextStyle(TYPOGRAPHY.HEADER_SUBTITLE, { color: COLORS.PRIMARY, marginLeft: 4, fontWeight: '500' })}>{conversations.length}</Text>
+          </View>
+        </View>
       </View>
 
       <FlatList

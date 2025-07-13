@@ -365,8 +365,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   return (
     <SafeAreaView style={COMMON_STYLES.screenContainer}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
+      <View style={COMMON_STYLES.header}>
+        <View style={COMMON_STYLES.headerLeft}>
           <Text style={TYPOGRAPHY.HEADER_TITLE}>AI Chat</Text>
           <TouchableOpacity 
             style={styles.assistantSelector}
@@ -376,7 +376,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
             <Ionicons name="chevron-down" size={16} color={COLORS.TEXT.SECONDARY} />
           </TouchableOpacity>
         </View>
-        <View style={styles.headerRight}>
+        <View style={COMMON_STYLES.headerRight}>
           <TouchableOpacity 
             style={styles.newChatButton}
             onPress={handleClearConversation}
@@ -457,27 +457,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: COLORS.BACKGROUND.WHITE,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  headerLeft: {
-    flex: 1,
-  },
   assistantSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
     paddingVertical: 4,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   newChatButton: {
     marginRight: 12,

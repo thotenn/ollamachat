@@ -86,15 +86,22 @@ export const COMMON_STYLES = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
-  
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
     backgroundColor: COLORS.BACKGROUND.WHITE,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BORDER.DEFAULT,
   },
-  
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   section: {
     backgroundColor: COLORS.BACKGROUND.WHITE,
     marginTop: 16,
