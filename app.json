@@ -22,7 +22,6 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ollamachat.app",
       "versionCode": 1,
       "permissions": [
         "INTERNET",

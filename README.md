@@ -457,6 +457,6 @@ but, if you want to build an APK, update eas.json to:
 ```
 Then run:
 ```bash
-eas build:configure
+eas build:configure  # for initial setup
 eas build --platform android --profile production
 ```
