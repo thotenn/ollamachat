@@ -39,4 +39,5 @@ yarn-error.*
 # Building
 build/
 android/
+!android/app/src/main/AndroidManifest.xml
 ios/

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
@@ -368,7 +368,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   return (
     <SafeAreaView 
       style={[COMMON_STYLES.screenContainer, Platform.OS === 'android' && styles.androidContainer]}
-      edges={Platform.OS === 'android' ? ['top', 'left', 'right'] : ['top', 'left', 'right']}
+      edges={Platform.OS === 'ios' ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}
     >
       <View style={COMMON_STYLES.header}>
         <View style={COMMON_STYLES.headerLeft}>
@@ -402,13 +402,20 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         hasContext={!!context}
       />
 
-      <CustomChat
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isTyping={isTyping}
-        placeholder="Escribe un mensaje..."
-        disabled={!isConnected || isTyping}
-      />
+      {/* Chat content */}
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -20}
+      >
+        <CustomChat
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isTyping={isTyping}
+          placeholder="Escribe un mensaje..."
+          disabled={!isConnected || isTyping}
+        />
+      </KeyboardAvoidingView>
 
       {/* Assistant Selection Modal */}
       <AssistantModal
@@ -424,11 +431,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
 const styles = StyleSheet.create({
   androidContainer: {
-    // For Android: avoid bottom padding but maintain proper layout
+    // For Android: maintain proper layout
     ...(Platform.OS === 'android' && {
       flex: 1,
       backgroundColor: COLORS.BACKGROUND.LIGHTER,
     }),
+  },
+  chatContainer: {
+    flex: 1,
   },
   assistantSelector: {
     flexDirection: 'row',

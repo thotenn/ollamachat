@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   Keyboard,
 } from 'react-native';
@@ -44,13 +43,16 @@ const CustomChat: React.FC<CustomChatProps> = ({
   useEffect(() => {
     if (Platform.OS === 'android') {
       const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-        // Ensure the list is scrolled to show the latest messages
+        // En Android con adjustPan, asegurar que el input esté visible
         setTimeout(() => {
           flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }, 150);
+        }, 100);
       });
       const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-        // Keyboard hidden
+        // Cuando se oculta el teclado, volver a la posición normal
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }, 100);
       });
 
       return () => {
@@ -73,9 +75,13 @@ const CustomChat: React.FC<CustomChatProps> = ({
 
   const handleInputFocus = () => {
     if (Platform.OS === 'android') {
-      // On Android, scroll to top when input is focused
+      // On Android, scroll to top when input is focused and ensure input is visible
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        // También hacer scroll adicional para asegurar que el input esté visible
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 200);
       }, 300);
     }
   };
@@ -119,45 +125,21 @@ const CustomChat: React.FC<CustomChatProps> = ({
   };
 
   return (
-    <>
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView 
-          style={styles.container}
-          behavior="padding"
-          keyboardVerticalOffset={90}
-        >
-          <ChatContent
-            isTyping={isTyping}
-            disabled={disabled}
-            flatListRef={flatListRef}
-            messages={messages}
-            renderMessage={renderMessage}
-            renderTypingIndicator={renderTypingIndicator}
-            inputText={inputText}
-            setInputText={setInputText}
-            handleSend={handleSend}
-            handleInputFocus={handleInputFocus}
-            placeholder={placeholder}
-          />
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={[styles.container, styles.androidContainer]}>
-          <ChatContent
-            isTyping={isTyping}
-            disabled={disabled}
-            flatListRef={flatListRef}
-            messages={messages}
-            renderMessage={renderMessage}
-            renderTypingIndicator={renderTypingIndicator}
-            inputText={inputText}
-            setInputText={setInputText}
-            handleSend={handleSend}
-            handleInputFocus={handleInputFocus}
-            placeholder={placeholder}
-          />
-        </View>
-      )}
-    </>
+    <View style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
+      <ChatContent
+        isTyping={isTyping}
+        disabled={disabled}
+        flatListRef={flatListRef}
+        messages={messages}
+        renderMessage={renderMessage}
+        renderTypingIndicator={renderTypingIndicator}
+        inputText={inputText}
+        setInputText={setInputText}
+        handleSend={handleSend}
+        handleInputFocus={handleInputFocus}
+        placeholder={placeholder}
+      />
+    </View>
   );
 };
 
@@ -187,7 +169,7 @@ const ChatContent: React.FC<{
   placeholder,
 }) => {
   return (
-    <>
+    <View style={{ flex: 1 }}>
       {disabled && (
         <View style={styles.warningContainer}>
           <Ionicons name="warning-outline" size={16} color={COLORS.TEXT.SECONDARY} />
@@ -231,7 +213,7 @@ const ChatContent: React.FC<{
           />
         </TouchableOpacity>
       </View>
-    </>
+    </View>
   );
 };
 
@@ -242,6 +224,7 @@ const styles = StyleSheet.create({
   },
   androidContainer: {
     flex: 1,
+    backgroundColor: COLORS.BACKGROUND.LIGHTER, // Asegurar que el fondo sea visible
   },
   warningContainer: {
     flexDirection: 'row',
@@ -340,6 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.BACKGROUND.WHITE,
     borderTopWidth: 1,
     borderTopColor: COLORS.BORDER.DEFAULT,
+    minHeight: 60, // Altura mínima garantizada
     ...(Platform.OS === 'android' && {
       paddingBottom: 12,
     }),
@@ -350,10 +334,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.BORDER.DEFAULT,
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 16,
-    maxHeight: 100,
+    minHeight: 40, // Altura mínima en lugar de máxima
+    maxHeight: 120, // Altura máxima más generosa
     backgroundColor: COLORS.BACKGROUND.LIGHT,
+    textAlignVertical: 'top', // Para Android
   },
   textInputDisabled: {
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
