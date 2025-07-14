@@ -11,8 +11,11 @@ class WebDatabaseService implements DatabaseAdapter {
   async initDatabase(): Promise<void> {
     try {
       if (this.db) {
+        console.log('Web database already initialized');
         return;
       }
+      
+      console.log('Initializing web database...');
       
       // Initialize SQL.js
       this.SQL = await initSqlJs({
@@ -23,12 +26,17 @@ class WebDatabaseService implements DatabaseAdapter {
       const savedData = await this.loadFromIndexedDB();
       
       if (savedData) {
+        console.log('Loading existing database from IndexedDB');
         this.db = new this.SQL.Database(savedData);
+        // Always check and initialize default data even for existing databases
+        await this.ensureDefaultData();
       } else {
+        console.log('Creating new database');
         this.db = new this.SQL.Database();
         await this.createTables();
       }
     } catch (error) {
+      console.error('Error initializing web database:', error);
       this.db = null;
       throw error;
     }
@@ -128,15 +136,40 @@ class WebDatabaseService implements DatabaseAdapter {
     }
   }
 
+  private async ensureDefaultData(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    console.log('Ensuring default data exists...');
+    
+    // First ensure tables exist
+    try {
+      this.db.exec(`SELECT COUNT(*) FROM ${DATABASE.TABLES.PROVIDERS}`);
+    } catch (error) {
+      console.log('Tables do not exist, creating them...');
+      await this.createTables();
+      return;
+    }
+    
+    // Then check and initialize default data
+    await this.initializeDefaultData();
+    
+    // Save after ensuring data
+    await this.saveToIndexedDB();
+  }
+
   private async initializeDefaultData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
+    console.log('Initializing default data...');
     const now = new Date().toISOString();
 
     // Check if we already have providers
     const existingProviders = this.db.exec(`SELECT COUNT(*) as count FROM ${DATABASE.TABLES.PROVIDERS}`);
+    const providerCount = existingProviders[0]?.values[0]?.[0] || 0;
     
-    if (existingProviders[0]?.values[0]?.[0] === 0) {
+    console.log(`Existing providers count: ${providerCount}`);
+    
+    if (providerCount === 0) {
       // Create default providers
       const defaultProviders = [
         {
@@ -169,12 +202,25 @@ class WebDatabaseService implements DatabaseAdapter {
         },
       ];
 
+      console.log('Creating default providers:', defaultProviders.map(p => p.name));
+      
       for (const provider of defaultProviders) {
-        this.db.exec(
-          `INSERT INTO ${DATABASE.TABLES.PROVIDERS} (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
-        );
+        try {
+          this.db.exec(
+            `INSERT INTO ${DATABASE.TABLES.PROVIDERS} (id, name, type, base_url, api_key, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [provider.id, provider.name, provider.type, provider.baseUrl, null, provider.isDefault ? 1 : 0, now, now]
+          );
+          console.log(`Created provider: ${provider.name}`);
+        } catch (error) {
+          console.error(`Error creating provider ${provider.name}:`, error);
+        }
       }
+      
+      // Verify providers were created
+      const finalCount = this.db.exec(`SELECT COUNT(*) as count FROM ${DATABASE.TABLES.PROVIDERS}`);
+      console.log(`Final provider count: ${finalCount[0]?.values[0]?.[0]}`);
+    } else {
+      console.log('Providers already exist, skipping creation');
     }
 
     // Check if we already have assistants
@@ -466,19 +512,48 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.saveToIndexedDB();
   }
 
+  // Debug method to reset database
+  async resetDatabase(): Promise<void> {
+    try {
+      console.log('Resetting web database...');
+      
+      // Clear IndexedDB
+      const request = indexedDB.deleteDatabase(DATABASE.INDEXEDDB.NAME);
+      await new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(undefined);
+        request.onerror = () => reject(request.error);
+      });
+      
+      // Reset in-memory database
+      if (this.SQL) {
+        this.db = new this.SQL.Database();
+        await this.createTables();
+        console.log('Database reset completed');
+      }
+    } catch (error) {
+      console.error('Error resetting database:', error);
+    }
+  }
+
   // Provider methods
   async getProviders(): Promise<Provider[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     try {
+      console.log('Fetching providers from web database...');
       const result = this.db.exec(`SELECT * FROM ${DATABASE.TABLES.PROVIDERS} ORDER BY is_default DESC, name ASC`);
       
-      if (!result || result.length === 0) return [];
+      console.log('Providers query result:', result);
+      
+      if (!result || result.length === 0) {
+        console.log('No providers found in database');
+        return [];
+      }
 
       const columns = result[0].columns;
       const values = result[0].values;
 
-      return values.map((row: any[]) => {
+      const providers = values.map((row: any[]) => {
         const provider: any = {};
         columns.forEach((col: string, index: number) => {
           provider[col] = row[index];
@@ -495,7 +570,11 @@ class WebDatabaseService implements DatabaseAdapter {
           updatedAt: provider.updated_at,
         };
       });
+      
+      console.log('Returning providers:', providers.map(p => p.name));
+      return providers;
     } catch (error) {
+      console.error('Error fetching providers:', error);
       return [];
     }
   }
