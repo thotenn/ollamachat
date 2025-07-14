@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '@env';
 
-// Función alternativa para copiar al clipboard sin expo-clipboard
+// Función mejorada para copiar al clipboard
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     if (Platform.OS === 'web') {
@@ -15,36 +16,28 @@ const copyToClipboard = async (text: string): Promise<boolean> => {
         // Fallback para navegadores más antiguos
         const textArea = document.createElement('textarea');
         textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
         try {
-          document.execCommand('copy');
+          const result = document.execCommand('copy');
           document.body.removeChild(textArea);
-          return true;
+          return result;
         } catch (err) {
           document.body.removeChild(textArea);
           return false;
         }
       }
     } else {
-      // Para React Native, intentar usar expo-clipboard si está disponible
-      try {
-        const Clipboard = require('expo-clipboard');
-        await Clipboard.setStringAsync(text);
-        return true;
-      } catch (e) {
-        // Si expo-clipboard no está disponible, usar @react-native-clipboard/clipboard
-        try {
-          const { Clipboard: RNClipboard } = require('@react-native-clipboard/clipboard');
-          RNClipboard.setString(text);
-          return true;
-        } catch (e2) {
-          return false;
-        }
-      }
+      // Para React Native, usar expo-clipboard
+      await Clipboard.setStringAsync(text);
+      return true;
     }
   } catch (error) {
+    console.warn('Error copying to clipboard:', error);
     return false;
   }
 };
@@ -68,15 +61,21 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
           // En web, solo feedback visual
           setTimeout(() => setCopied(false), 2000);
         } else {
-          // En móvil, mostrar alerta
-          Alert.alert('Copiado', 'Código copiado al portapapeles');
+          // En móvil, feedback visual sin alert que puede causar problemas
           setTimeout(() => setCopied(false), 2000);
         }
       } else {
-        Alert.alert('Error', 'No se pudo copiar el código');
+        // En caso de error, mostrar feedback pero sin crash
+        console.warn('No se pudo copiar el código');
+        if (Platform.OS !== 'web') {
+          // Solo mostrar alert en casos específicos y controlados
+          Alert.alert('Información', 'No se pudo copiar el código. Inténtalo de nuevo.');
+        }
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo copiar el código');
+      console.error('Error en handleCopy:', error);
+      // No mostrar alert en caso de error para evitar crashes
+      // Solo log del error para debugging
     }
   };
 
