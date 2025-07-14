@@ -10,6 +10,7 @@ import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessageDB } from '../types';
+import { useCommonAlert } from '../hooks/useCommonAlert';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 import * as Clipboard from 'expo-clipboard';
@@ -40,6 +41,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
   const [messageMenuVisible, setMessageMenuVisible] = useState(false);
+  
+  const { showAlert, AlertComponent } = useCommonAlert();
 
   // Database is initialized in SettingsContext, no need to do it here
 
@@ -97,7 +100,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load conversation');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load conversation',
+        buttons: [{ text: 'OK' }]
+      });
     }
   };
 
@@ -210,7 +217,11 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleSendMessage = useCallback(async (text: string) => {
     if (!isConnected || !currentProvider) {
-      Alert.alert('Sin conexión', 'No se puede conectar con el proveedor de IA');
+      showAlert({
+        title: 'Sin conexión',
+        message: 'No se puede conectar con el proveedor de IA',
+        buttons: [{ text: 'OK' }]
+      });
       return;
     }
 
@@ -363,12 +374,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
                            errorMessage.toLowerCase().includes('allocation') ||
                            errorMessage.toLowerCase().includes('heap');
       
-      Alert.alert(
-        'Error', 
-        isMemoryError 
+      showAlert({
+        title: 'Error',
+        message: isMemoryError 
           ? 'La respuesta es demasiado larga. Intenta con una pregunta más específica.'
-          : 'No se pudo enviar el mensaje. Verifica tu conexión.'
-      );
+          : 'No se pudo enviar el mensaje. Verifica tu conexión.',
+        buttons: [{ text: 'OK' }]
+      });
       
       setIsTyping(false);
       
@@ -388,29 +400,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       onConversationChange?.(undefined);
     };
 
-    if (Platform.OS === 'web') {
-      // En web, usar confirm nativo
-      if (window.confirm('¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.')) {
-        clearConversation();
-      }
-    } else {
-      // En móvil, usar Alert de React Native
-      Alert.alert(
-        'Nueva Conversación',
-        '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
-          {
-            text: 'Confirmar',
-            style: 'destructive',
-            onPress: clearConversation,
-          },
-        ]
-      );
-    }
+    showAlert({
+      title: 'Nueva Conversación',
+      message: '¿Estás seguro de que quieres iniciar una nueva conversación? Se perderá el contexto actual.',
+      buttons: [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirmar',
+          style: 'destructive',
+          onPress: clearConversation,
+        },
+      ]
+    });
   }, [onConversationChange]);
 
   const copyToClipboard = async (text: string): Promise<boolean> => {
@@ -537,6 +541,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         onClose={() => setAssistantModalVisible(false)}
         onAssistantChange={handleAssistantChange}
       />
+      
+      {AlertComponent}
     </SafeAreaView>
   );
 };

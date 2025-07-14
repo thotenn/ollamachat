@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, Modal, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import CommonModal from "./CommonModal";
 import { COLORS } from "@env";
 import {
   COMMON_STYLES,
@@ -31,11 +32,12 @@ const AssistantModal: React.FC<AssistantModalProps> = ({
   onAssistantChange,
 }) => {
   return (
-    <Modal
+    <CommonModal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
       transparent={false}
+      onRequestClose={onClose}
     >
       <SafeAreaView style={COMMON_STYLES.modalContainer}>
         <View style={COMMON_STYLES.header}>
@@ -95,7 +97,7 @@ const AssistantModal: React.FC<AssistantModalProps> = ({
           ))}
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </CommonModal>
   );
 };
 

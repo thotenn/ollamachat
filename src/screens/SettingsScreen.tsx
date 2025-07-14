@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Modal,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +16,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import providerService, { AIModel } from '../services/providerService';
 import { Provider, Assistant } from '../types';
 import CorsWarning from '../components/CorsWarning';
+import CommonModal from '../components/CommonModal';
+import { useCommonAlert } from '../hooks/useCommonAlert';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 
@@ -57,6 +58,8 @@ const SettingsScreen: React.FC = () => {
     instructions: '',
     isDefault: false,
   });
+  
+  const { showAlert, AlertComponent } = useCommonAlert();
 
   useEffect(() => {
     if (isConnected && currentProvider) {
@@ -132,13 +135,18 @@ const SettingsScreen: React.FC = () => {
         selectedModel,
         selectedAssistantId: settings.selectedAssistantId,
       });
-      Alert.alert(
-        'Configuración Guardada', 
-        `Proveedor: ${currentProvider?.name || 'N/A'}\nModelo: ${selectedModel || 'N/A'}\nAsistente: ${currentAssistant?.name || 'N/A'}\n\nLa configuración se ha guardado y se restaurará al reiniciar la aplicación.`
-      );
+      showAlert({
+        title: 'Configuración Guardada', 
+        message: `Proveedor: ${currentProvider?.name || 'N/A'}\nModelo: ${selectedModel || 'N/A'}\nAsistente: ${currentAssistant?.name || 'N/A'}\n\nLa configuración se ha guardado y se restaurará al reiniciar la aplicación.`,
+        buttons: [{ text: 'OK' }]
+      });
     } catch (error) {
       console.error('Error saving settings:', error);
-      Alert.alert('Error', 'No se pudo guardar la configuración. Por favor, inténtalo de nuevo.');
+      showAlert({
+        title: 'Error',
+        message: 'No se pudo guardar la configuración. Por favor, inténtalo de nuevo.',
+        buttons: [{ text: 'OK' }]
+      });
     } finally {
       setIsSaving(false);
     }
@@ -210,9 +218,17 @@ const SettingsScreen: React.FC = () => {
         apiKey: editingProvider.apiKey,
       });
       setProviderModalVisible(false);
-      Alert.alert('Éxito', 'Proveedor actualizado correctamente');
+      showAlert({
+        title: 'Éxito',
+        message: 'Proveedor actualizado correctamente',
+        buttons: [{ text: 'OK' }]
+      });
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar el proveedor');
+      showAlert({
+        title: 'Error',
+        message: 'No se pudo actualizar el proveedor',
+        buttons: [{ text: 'OK' }]
+      });
     }
   };
 
@@ -242,23 +258,35 @@ const SettingsScreen: React.FC = () => {
       if (editingAssistant) {
         // Update existing assistant
         await updateAssistant(editingAssistant.id, newAssistant);
-        Alert.alert('Éxito', 'Asistente actualizado correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Asistente actualizado correctamente',
+          buttons: [{ text: 'OK' }]
+        });
       } else {
         // Create new assistant
         await createAssistant(newAssistant);
-        Alert.alert('Éxito', 'Asistente creado correctamente');
+        showAlert({
+          title: 'Éxito',
+          message: 'Asistente creado correctamente',
+          buttons: [{ text: 'OK' }]
+        });
       }
       setAssistantModalVisible(false);
     } catch (error) {
-      Alert.alert('Error', editingAssistant ? 'No se pudo actualizar el asistente' : 'No se pudo crear el asistente');
+      showAlert({
+        title: 'Error',
+        message: editingAssistant ? 'No se pudo actualizar el asistente' : 'No se pudo crear el asistente',
+        buttons: [{ text: 'OK' }]
+      });
     }
   };
 
   const handleAssistantDelete = async (assistantId: string) => {
-    Alert.alert(
-      'Confirmar eliminación',
-      '¿Estás seguro de que quieres eliminar este asistente?',
-      [
+    showAlert({
+      title: 'Confirmar eliminación',
+      message: '¿Estás seguro de que quieres eliminar este asistente?',
+      buttons: [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Eliminar',
@@ -266,14 +294,22 @@ const SettingsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteAssistant(assistantId);
-              Alert.alert('Éxito', 'Asistente eliminado correctamente');
+              showAlert({
+                title: 'Éxito',
+                message: 'Asistente eliminado correctamente',
+                buttons: [{ text: 'OK' }]
+              });
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el asistente');
+              showAlert({
+                title: 'Error',
+                message: 'No se pudo eliminar el asistente',
+                buttons: [{ text: 'OK' }]
+              });
             }
           },
         },
       ]
-    );
+    });
   };
 
   return (
@@ -454,10 +490,11 @@ const SettingsScreen: React.FC = () => {
       </ScrollView>
 
       {/* Provider Edit Modal */}
-      <Modal
+      <CommonModal
         visible={providerModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
+        onRequestClose={() => setProviderModalVisible(false)}
       >
         <SafeAreaView style={COMMON_STYLES.modalContainer}>
           <View style={COMMON_STYLES.modalHeader}>
@@ -509,13 +546,14 @@ const SettingsScreen: React.FC = () => {
             </ScrollView>
           )}
         </SafeAreaView>
-      </Modal>
+      </CommonModal>
 
       {/* Assistant Edit Modal */}
-      <Modal
+      <CommonModal
         visible={assistantModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
+        onRequestClose={() => setAssistantModalVisible(false)}
       >
         <SafeAreaView style={COMMON_STYLES.modalContainer}>
           <View style={COMMON_STYLES.modalHeader}>
@@ -575,7 +613,9 @@ const SettingsScreen: React.FC = () => {
             </View>
           </ScrollView>
         </SafeAreaView>
-      </Modal>
+      </CommonModal>
+      
+      {AlertComponent}
     </SafeAreaView>
   );
 };

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { ChatConversation } from '../types';
 import databaseService from '../services/databaseService';
+import { useCommonAlert } from '../hooks/useCommonAlert';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
 
@@ -25,13 +25,19 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  const { showAlert, AlertComponent } = useCommonAlert();
 
   const loadConversations = useCallback(async () => {
     try {
       const data = await databaseService.getConversations();
       setConversations(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load chat history');
+      showAlert({
+        title: 'Error',
+        message: 'Failed to load chat history',
+        buttons: [{ text: 'OK' }]
+      });
     } finally {
       setLoading(false);
     }
@@ -55,7 +61,11 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         await databaseService.initDatabase();
         await loadConversations();
       } catch (error) {
-        Alert.alert('Error', 'Failed to initialize database');
+        showAlert({
+          title: 'Error',
+          message: 'Failed to initialize database',
+          buttons: [{ text: 'OK' }]
+        });
       }
     };
 
@@ -63,10 +73,10 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
   }, [loadConversations]);
 
   const handleDeleteConversation = useCallback((conversationId: string, title: string) => {
-    Alert.alert(
-      'Delete Conversation',
-      `Are you sure you want to delete "${title}"? This action cannot be undone.`,
-      [
+    showAlert({
+      title: 'Delete Conversation',
+      message: `Are you sure you want to delete "${title}"? This action cannot be undone.`,
+      buttons: [
         {
           text: 'Cancel',
           style: 'cancel',
@@ -79,13 +89,17 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
               await databaseService.deleteConversation(conversationId);
               await loadConversations();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete conversation');
+              showAlert({
+                title: 'Error',
+                message: 'Failed to delete conversation',
+                buttons: [{ text: 'OK' }]
+              });
             }
           },
         },
       ]
-    );
-  }, [loadConversations]);
+    });
+  }, [loadConversations, showAlert]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -192,6 +206,8 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectConversation }) =
         }
         showsVerticalScrollIndicator={false}
       />
+      
+      {AlertComponent}
     </SafeAreaView>
   );
 };
