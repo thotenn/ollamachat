@@ -63,8 +63,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   useEffect(() => {
     if (conversationId && conversationId !== currentConversationId) {
+      // Cerrar el menú de mensaje cuando cambie la conversación
+      setMessageMenuVisible(false);
+      setSelectedMessage(null);
       loadConversation(conversationId);
     } else if (!conversationId) {
+      // Cerrar el menú de mensaje cuando se inicie una nueva conversación
+      setMessageMenuVisible(false);
+      setSelectedMessage(null);
       startNewConversation();
     }
   }, [conversationId, settings.selectedModel, currentProvider, currentAssistant]);
@@ -375,6 +381,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   const handleClearConversation = useCallback(() => {
     
     const clearConversation = () => {
+      // Cerrar el menú de mensaje antes de limpiar la conversación
+      setMessageMenuVisible(false);
+      setSelectedMessage(null);
       startNewConversation();
       onConversationChange?.(undefined);
     };

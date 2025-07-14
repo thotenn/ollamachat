@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@env';
 
@@ -11,20 +11,35 @@ interface MessageMenuProps {
 
 const MessageMenu: React.FC<MessageMenuProps> = ({ visible, onCopy, onClose }) => {
   if (!visible) return null;
+  
   return (
-    <View style={styles.menuContainer}>
-      <TouchableOpacity style={styles.menuItem} onPress={onCopy}>
-        <Ionicons name="copy-outline" size={18} color={COLORS.TEXT.DARK} />
-        <Text style={styles.menuText}>Copiar</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.menuClose} onPress={onClose}>
-        <Ionicons name="close" size={18} color={COLORS.TEXT.SECONDARY} />
-      </TouchableOpacity>
-    </View>
+    <TouchableWithoutFeedback onPress={onClose}>
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={() => {}}>
+          <View style={styles.menuContainer}>
+            <TouchableOpacity style={styles.menuItem} onPress={onCopy}>
+              <Ionicons name="copy-outline" size={18} color={COLORS.TEXT.DARK} />
+              <Text style={styles.menuText}>Copiar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuClose} onPress={onClose}>
+              <Ionicons name="close" size={18} color={COLORS.TEXT.SECONDARY} />
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99,
+  },
   menuContainer: {
     position: 'absolute',
     top: 70, // Posicionar justo debajo del header
