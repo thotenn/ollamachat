@@ -83,41 +83,108 @@ class OllamaProviderService extends BaseProviderService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
+    console.log('OllamaProviderService: Starting streaming request...');
+    
     try {
-      const response = await this.generateResponse(request);
+      // Try real streaming first
+      const prompt = request.instructions 
+        ? `${request.instructions}\n\nUser: ${request.prompt}\nAssistant:`
+        : request.prompt;
+
+      // Use XMLHttpRequest for better React Native compatibility
+      const xhr = new XMLHttpRequest();
+      let responseBuffer = '';
+      let finalContext: number[] | undefined;
       
-      // Simulate streaming by chunking the response
-      const words = response.response.split(' ');
-      let currentIndex = 0;
+      xhr.open('POST', `${this.provider.baseUrl}${URLS.OLLAMA.API.GENERATE}`, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
       
-      const scheduleNext = (callback: () => void) => {
-        if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(callback);
-        } else {
-          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
-        }
-      };
-      
-      const processChunk = () => {
-        if (currentIndex < words.length) {
-          const chunk = words.slice(currentIndex, Math.min(currentIndex + 3, words.length)).join(' ');
-          if (currentIndex + 3 < words.length) {
-            onChunk(chunk + ' ');
-          } else {
-            onChunk(chunk);
+      // Handle progress events for streaming
+      xhr.onprogress = () => {
+        const newText = xhr.responseText.substring(responseBuffer.length);
+        responseBuffer = xhr.responseText;
+        
+        if (newText) {
+          const lines = newText.split('\n').filter(line => line.trim());
+          
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              
+              if (data.response) {
+                console.log('Ollama streaming chunk:', data.response);
+                onChunk(data.response);
+              }
+              
+              if (data.done) {
+                finalContext = data.context;
+              }
+              
+              if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (parseError) {
+              // Skip invalid JSON lines
+              console.warn('Failed to parse Ollama streaming line:', line);
+            }
           }
-          currentIndex += 3;
-          scheduleNext(processChunk);
-        } else {
-          onComplete(response.context);
         }
       };
       
-      scheduleNext(processChunk);
+      xhr.onload = () => {
+        console.log('Ollama streaming request completed');
+        onComplete(finalContext);
+      };
+      
+      xhr.onerror = () => {
+        throw new Error('Network error during Ollama streaming');
+      };
+      
+      xhr.ontimeout = () => {
+        throw new Error('Ollama streaming request timed out');
+      };
+      
+      xhr.timeout = DEFAULTS.TIMEOUTS.LONG;
+      
+      // Send the request
+      xhr.send(JSON.stringify({
+        model: request.model,
+        prompt,
+        stream: true,
+        context: request.context,
+        options: request.options,
+      }));
       
     } catch (error) {
-      onComplete();
-      throw error;
+      console.error('Ollama streaming failed, falling back to simulated streaming:', error);
+      
+      // Fallback to simulated streaming
+      try {
+        const response = await this.generateResponse(request);
+        
+        // Fast character-by-character streaming for better UX
+        const characters = response.response.split('');
+        let currentIndex = 0;
+        
+        const processChar = () => {
+          if (currentIndex >= characters.length) {
+            onComplete(response.context);
+            return;
+          }
+          
+          onChunk(characters[currentIndex]);
+          currentIndex++;
+          
+          // Very fast character streaming
+          setTimeout(processChar, 15);
+        };
+        
+        processChar();
+        
+      } catch (fallbackError) {
+        onComplete();
+        throw fallbackError;
+      }
     }
   }
 

@@ -281,18 +281,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         },
         (chunk: string) => {
           fullResponse += chunk;
-          // Throttle updates to reduce re-renders for very long responses
-          const shouldUpdate = fullResponse.length % 50 === 0 || chunk.trim().endsWith('.') || chunk.trim().endsWith('!') || chunk.trim().endsWith('?');
-          
-          if (shouldUpdate || fullResponse.length < 200) {
-            setMessages(previousMessages => {
-              return previousMessages.map(message => 
-                message.id === tempMessage.id 
-                  ? { ...message, text: fullResponse }
-                  : message
-              );
-            });
-          }
+          // Update immediately for real-time streaming
+          setMessages(previousMessages => {
+            return previousMessages.map(message => 
+              message.id === tempMessage.id 
+                ? { ...message, text: fullResponse }
+                : message
+            );
+          });
         },
         async (newContext?: number[]) => {
           setIsTyping(false);

@@ -51,74 +51,156 @@ class OllamaService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
+    console.log('Starting streaming request...');
+    
     try {
-      // React Native doesn't support streaming in the same way, so we'll use a non-streaming approach
-      const response = await this.generateResponse(request);
+      // Use XMLHttpRequest for better React Native compatibility
+      const xhr = new XMLHttpRequest();
+      let responseBuffer = '';
+      let finalContext: number[] | undefined;
       
-      // Check response length and limit if necessary
-      const MAX_RESPONSE_LENGTH = 50000; // Characters limit to prevent memory issues
-      let responseText = response.response;
-      if (responseText.length > MAX_RESPONSE_LENGTH) {
-        responseText = responseText.substring(0, MAX_RESPONSE_LENGTH) + '... [Respuesta truncada por seguridad]';
-      }
+      xhr.open('POST', `${this.baseUrl}${URLS.OLLAMA.API.GENERATE}`, true);
+      xhr.setRequestHeader(API_HEADERS.CONTENT_TYPE, 'application/json');
       
-      // For very long responses, reduce chunking frequency to prevent performance issues
-      const words = responseText.split(' ');
-      const isLongResponse = words.length > 500;
-      const chunkSize = isLongResponse ? 8 : 3; // Larger chunks for long responses
-      const delay = isLongResponse ? DEFAULTS.TIMEOUTS.DELAY * 2 : DEFAULTS.TIMEOUTS.DELAY;
-      
-      let currentIndex = 0;
-      let isProcessing = true;
-      
-      // Use requestAnimationFrame for web or setTimeout for native
-      const scheduleNext = (callback: () => void) => {
-        if (!isProcessing) return; // Safety check
+      // Handle progress events for streaming
+      xhr.onprogress = () => {
+        const newText = xhr.responseText.substring(responseBuffer.length);
+        responseBuffer = xhr.responseText;
         
-        if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(callback);
-        } else {
-          setTimeout(callback, delay);
-        }
-      };
-      
-      const processChunk = () => {
-        if (!isProcessing || currentIndex >= words.length) {
-          isProcessing = false;
-          // Pass the context from the response to maintain conversation continuity
-          onComplete(response.context);
-          return;
-        }
-        
-        try {
-          const chunk = words.slice(currentIndex, Math.min(currentIndex + chunkSize, words.length)).join(' ');
-          if (currentIndex + chunkSize < words.length) {
-            onChunk(chunk + ' ');
-          } else {
-            onChunk(chunk);
+        if (newText) {
+          const lines = newText.split('\n').filter(line => line.trim());
+          
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              
+              if (data.response) {
+                console.log('Streaming chunk received:', data.response);
+                onChunk(data.response);
+              }
+              
+              if (data.done) {
+                finalContext = data.context;
+              }
+              
+              if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (parseError) {
+              // Skip invalid JSON lines
+              console.warn('Failed to parse streaming line:', line);
+            }
           }
-          currentIndex += chunkSize;
-          scheduleNext(processChunk);
-        } catch (chunkError) {
-          isProcessing = false;
-          onComplete(response.context);
         }
       };
       
-      scheduleNext(processChunk);
+      xhr.onload = () => {
+        console.log('Streaming request completed');
+        onComplete(finalContext);
+      };
       
-      // Safety timeout for very long responses
-      setTimeout(() => {
-        if (isProcessing && currentIndex < words.length) {
-          isProcessing = false;
-          onChunk(words.slice(currentIndex).join(' '));
-          onComplete(response.context);
-        }
-      }, 30000); // 30 seconds max processing time
+      xhr.onerror = () => {
+        throw new Error('Network error during streaming');
+      };
+      
+      xhr.ontimeout = () => {
+        throw new Error('Streaming request timed out');
+      };
+      
+      xhr.timeout = DEFAULTS.TIMEOUTS.LONG;
+      
+      // Send the request
+      xhr.send(JSON.stringify({
+        ...request,
+        stream: true,
+      }));
       
     } catch (error) {
-      onComplete();
-      throw error;
+      console.error('XMLHttpRequest streaming failed, falling back to fetch-based streaming:', error);
+      
+      // Try fetch as secondary option
+      try {
+        const response = await fetch(`${this.baseUrl}${URLS.OLLAMA.API.GENERATE}`, {
+          method: 'POST',
+          headers: {
+            [API_HEADERS.CONTENT_TYPE]: 'application/json',
+          },
+          body: JSON.stringify({
+            ...request,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('Failed to get response reader');
+        }
+
+        const decoder = new TextDecoder();
+        let finalContext: number[] | undefined;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line);
+                
+                if (data.response) {
+                  console.log('Fetch streaming chunk:', data.response);
+                  onChunk(data.response);
+                }
+                
+                if (data.done) {
+                  finalContext = data.context;
+                  onComplete(finalContext);
+                  return;
+                }
+              } catch (parseError) {
+                console.warn('Failed to parse fetch streaming line:', line);
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        onComplete(finalContext);
+        
+      } catch (fetchError) {
+        console.error('Both streaming methods failed, falling back to simulated streaming:', fetchError);
+        
+        // Final fallback: simulated streaming with immediate response
+        const response = await this.generateResponse(request);
+        
+        // Very fast simulated streaming for better UX
+        const characters = response.response.split('');
+        let currentIndex = 0;
+        
+        const processChar = () => {
+          if (currentIndex >= characters.length) {
+            onComplete(response.context);
+            return;
+          }
+          
+          onChunk(characters[currentIndex]);
+          currentIndex++;
+          
+          // Very fast character-by-character streaming
+          setTimeout(processChar, 10);
+        };
+        
+        processChar();
+      }
     }
   }
 
