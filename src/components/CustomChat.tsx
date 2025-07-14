@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MessageRenderer from './MessageRenderer';
@@ -41,7 +42,9 @@ const CustomChat: React.FC<CustomChatProps> = ({
   disabled = false,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -61,6 +64,26 @@ const CustomChat: React.FC<CustomChatProps> = ({
       };
     }
   }, []);
+
+  // Animar la aparición/desaparición del botón de scroll
+  useEffect(() => {
+    Animated.timing(scrollButtonOpacity, {
+      toValue: showScrollButton ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [showScrollButton, scrollButtonOpacity]);
+
+  const handleScroll = (event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.y;
+    // Mostrar el botón cuando el usuario se desplace más de 100 píxeles hacia arriba
+    setShowScrollButton(scrollOffset > 100);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollButton(false);
+  };
 
   const handleSend = () => {
     if (inputText.trim()) {
@@ -144,7 +167,24 @@ const CustomChat: React.FC<CustomChatProps> = ({
             handleSend={handleSend}
             handleInputFocus={handleInputFocus}
             placeholder={placeholder}
+            handleScroll={handleScroll}
           />
+          {/* Botón de scroll to bottom */}
+          <Animated.View 
+            style={[
+              styles.scrollToBottomButton,
+              { opacity: scrollButtonOpacity }
+            ]}
+            pointerEvents={showScrollButton ? 'auto' : 'none'}
+          >
+            <TouchableOpacity 
+              style={styles.scrollButtonTouchable}
+              onPress={scrollToBottom}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+          </Animated.View>
         </KeyboardAvoidingView>
       ) : (
         <View style={[styles.container, styles.androidContainer]}>
@@ -160,7 +200,24 @@ const CustomChat: React.FC<CustomChatProps> = ({
             handleSend={handleSend}
             handleInputFocus={handleInputFocus}
             placeholder={placeholder}
+            handleScroll={handleScroll}
           />
+          {/* Botón de scroll to bottom */}
+          <Animated.View 
+            style={[
+              styles.scrollToBottomButton,
+              { opacity: scrollButtonOpacity }
+            ]}
+            pointerEvents={showScrollButton ? 'auto' : 'none'}
+          >
+            <TouchableOpacity 
+              style={styles.scrollButtonTouchable}
+              onPress={scrollToBottom}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       )}
     </>
@@ -179,6 +236,7 @@ const ChatContent: React.FC<{
   handleSend: () => void;
   handleInputFocus: () => void;
   placeholder: string;
+  handleScroll: (event: any) => void;
 }> = ({
   isTyping = false,
   disabled,
@@ -191,6 +249,7 @@ const ChatContent: React.FC<{
   handleSend,
   handleInputFocus,
   placeholder,
+  handleScroll,
 }) => {
   return (
     <>
@@ -210,6 +269,8 @@ const ChatContent: React.FC<{
         inverted
         ListHeaderComponent={renderTypingIndicator}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       />
       
       <View style={styles.inputContainer}>
@@ -372,6 +433,30 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    backgroundColor: COLORS.BACKGROUND.WHITE,
+    borderRadius: 25,
+    elevation: 4,
+    shadowColor: COLORS.SHADOW.DARK,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER.DEFAULT,
+  },
+  scrollButtonTouchable: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
