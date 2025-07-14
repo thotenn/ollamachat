@@ -128,6 +128,7 @@ const styles = {
     minWidth: 270,
     maxWidth: 320,
     paddingTop: 20,
+    paddingBottom: 16,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
