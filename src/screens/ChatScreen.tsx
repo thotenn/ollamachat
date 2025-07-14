@@ -5,12 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
 import AssistantModal from '../components/AssistantModal';
 import FloatingProvider from '../components/FloatingProvider';
+import MessageMenu from '../components/MessageMenu';
 import providerService from '../services/providerService';
 import databaseService from '../services/databaseService';
 import { useSettings } from '../contexts/SettingsContext';
 import { ChatMessageDB } from '../types';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
+import * as Clipboard from 'expo-clipboard';
 
 interface ChatScreenProps {
   conversationId?: string;
@@ -36,6 +38,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   const [messageCount, setMessageCount] = useState(0);
   const [assistantModalVisible, setAssistantModalVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
+  const [messageMenuVisible, setMessageMenuVisible] = useState(false);
 
   // Database is initialized in SettingsContext, no need to do it here
 
@@ -400,6 +404,59 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   }, [onConversationChange]);
 
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'web') {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } else {
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          try {
+            const result = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return result;
+          } catch (err) {
+            document.body.removeChild(textArea);
+            return false;
+          }
+        }
+      } else {
+        await Clipboard.setStringAsync(text);
+        return true;
+      }
+    } catch (error) {
+      console.warn('Error copying to clipboard:', error);
+      return false;
+    }
+  };
+
+  const handleMessagePress = (message: ChatMessage) => {
+    setSelectedMessage(message);
+    setMessageMenuVisible(true);
+  };
+
+  const handleCopyMessage = async () => {
+    if (selectedMessage) {
+      const success = await copyToClipboard(selectedMessage.text);
+      // El mensaje de confirmación aparece automáticamente por el sistema
+    }
+    setMessageMenuVisible(false);
+    setSelectedMessage(null);
+  };
+
+  const handleCloseMessageMenu = () => {
+    setMessageMenuVisible(false);
+    setSelectedMessage(null);
+  };
+
   const handleAssistantChange = async (assistantId: string) => {
     try {
       await updateSettings({ selectedAssistantId: assistantId });
@@ -438,6 +495,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
       </View>
 
+      {/* Message Menu */}
+      {messageMenuVisible && (
+        <MessageMenu
+          visible={messageMenuVisible}
+          onCopy={handleCopyMessage}
+          onClose={handleCloseMessageMenu}
+        />
+      )}
+
       {/* Floating Status Component */}
       <FloatingProvider
         isConnected={isConnected}
@@ -448,6 +514,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       <CustomChat
         messages={messages}
         onSendMessage={handleSendMessage}
+        onMessagePress={handleMessagePress}
         isTyping={isTyping}
         placeholder="Escribe un mensaje..."
         disabled={!isConnected || isTyping}

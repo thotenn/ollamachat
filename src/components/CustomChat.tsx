@@ -26,6 +26,7 @@ export interface ChatMessage {
 interface CustomChatProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
+  onMessagePress?: (message: ChatMessage) => void;
   isTyping?: boolean;
   placeholder?: string;
   disabled?: boolean;
@@ -34,6 +35,7 @@ interface CustomChatProps {
 const CustomChat: React.FC<CustomChatProps> = ({
   messages,
   onSendMessage,
+  onMessagePress,
   isTyping = false,
   placeholder = "Escribe un mensaje...",
   disabled = false,
@@ -86,10 +88,14 @@ const CustomChat: React.FC<CustomChatProps> = ({
     }
     
     return (
-      <View style={[
-        styles.messageContainer,
-        item.isUser ? styles.userMessage : styles.botMessage
-      ]}>
+      <TouchableOpacity 
+        style={[
+          styles.messageContainer,
+          item.isUser ? styles.userMessage : styles.botMessage
+        ]}
+        onPress={() => onMessagePress?.(item)}
+        activeOpacity={0.7}
+      >
         <View style={[
           styles.messageBubble,
           item.isUser ? styles.userBubble : styles.botBubble
@@ -102,7 +108,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
             {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
