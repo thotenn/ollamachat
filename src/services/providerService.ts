@@ -244,10 +244,13 @@ class AnthropicProviderService extends BaseProviderService {
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
         messages.push(...request.messageHistory);
+        console.log('🔍 Anthropic - Message history being sent:', request.messageHistory.length, 'messages');
+        console.log('📝 Full conversation context:', JSON.stringify(request.messageHistory, null, 2));
       }
 
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
+      console.log('💬 Current prompt:', request.prompt);
 
       const requestBody: any = {
         model: request.model,
@@ -298,10 +301,12 @@ class AnthropicProviderService extends BaseProviderService {
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
         messages.push(...request.messageHistory);
+        console.log('🔍 Anthropic Streaming - Message history being sent:', request.messageHistory.length, 'messages');
       }
 
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
+      console.log('💬 Streaming - Current prompt:', request.prompt);
 
       const requestBody: any = {
         model: request.model,
