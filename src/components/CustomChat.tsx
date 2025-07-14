@@ -188,7 +188,7 @@ const ChatContent: React.FC<{
 }) => {
   return (
     <>
-      {disabled && (
+      {(disabled && !isTyping) && (
         <View style={styles.warningContainer}>
           <Ionicons name="warning-outline" size={16} color={COLORS.TEXT.SECONDARY} />
           <Text style={styles.warningText}>No conectado al proveedor de IA. Conéctate para enviar mensajes.</Text>
