@@ -83,7 +83,6 @@ class OllamaProviderService extends BaseProviderService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
-    console.log('OllamaProviderService: Starting streaming request...');
     
     try {
       // Try real streaming first
@@ -112,7 +111,6 @@ class OllamaProviderService extends BaseProviderService {
               const data = JSON.parse(line);
               
               if (data.response) {
-                console.log('Ollama streaming chunk:', data.response);
                 onChunk(data.response);
               }
               
@@ -132,7 +130,6 @@ class OllamaProviderService extends BaseProviderService {
       };
       
       xhr.onload = () => {
-        console.log('Ollama streaming request completed');
         onComplete(finalContext);
       };
       
@@ -244,13 +241,10 @@ class AnthropicProviderService extends BaseProviderService {
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
         messages.push(...request.messageHistory);
-        console.log('🔍 Anthropic - Message history being sent:', request.messageHistory.length, 'messages');
-        console.log('📝 Full conversation context:', JSON.stringify(request.messageHistory, null, 2));
       }
 
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
-      console.log('💬 Current prompt:', request.prompt);
 
       const requestBody: any = {
         model: request.model,
@@ -289,8 +283,6 @@ class AnthropicProviderService extends BaseProviderService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
-    console.log('AnthropicProviderService: Starting streaming request...');
-    
     try {
       if (!this.provider.apiKey) {
         throw new Error('API Key is required for Anthropic');
@@ -301,12 +293,10 @@ class AnthropicProviderService extends BaseProviderService {
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
         messages.push(...request.messageHistory);
-        console.log('🔍 Anthropic Streaming - Message history being sent:', request.messageHistory.length, 'messages');
       }
 
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
-      console.log('💬 Streaming - Current prompt:', request.prompt);
 
       const requestBody: any = {
         model: request.model,
@@ -351,7 +341,6 @@ class AnthropicProviderService extends BaseProviderService {
                 const data = JSON.parse(jsonStr);
                 
                 if (data.type === 'content_block_delta' && data.delta?.text) {
-                  console.log('Anthropic streaming chunk:', data.delta.text);
                   onChunk(data.delta.text);
                 }
                 
@@ -373,7 +362,6 @@ class AnthropicProviderService extends BaseProviderService {
       };
       
       xhr.onload = () => {
-        console.log('Anthropic streaming request completed');
         onComplete();
       };
       

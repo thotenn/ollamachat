@@ -54,7 +54,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const checkConnection = async () => {
     if (!currentProvider) {
-      console.log('No current provider, setting disconnected');
       setIsConnected(false);
       return;
     }
@@ -82,9 +81,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Load settings when providers and assistants are loaded
   useEffect(() => {
     if (providers.length > 0 && assistants.length > 0 && !settingsLoaded) {
-      console.log('Providers and assistants loaded, loading settings...');
-      console.log('Providers:', providers.map(p => `${p.id}: ${p.name}`));
-      console.log('Assistants:', assistants.map(a => `${a.id}: ${a.name}`));
       loadSettings();
     }
   }, [providers, assistants, settingsLoaded]);
@@ -96,7 +92,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       try {
         loadedSettings = await databaseService.getSettings();
-        console.log('Settings loaded from database:', loadedSettings);
       } catch (dbError) {
         console.warn('Failed to load settings from database:', dbError);
       }
@@ -106,13 +101,11 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const storedSettings = await AsyncStorage.getItem(SETTINGS_KEY);
         if (storedSettings) {
           loadedSettings = JSON.parse(storedSettings);
-          console.log('Settings loaded from AsyncStorage:', loadedSettings);
           
           // Save to database for future use
           if (loadedSettings) {
             try {
               await databaseService.saveSettings(loadedSettings);
-              console.log('Settings migrated to database');
             } catch (error) {
               console.warn('Failed to migrate settings to database:', error);
             }
@@ -128,7 +121,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         const assistant = assistants.find(a => a.id === loadedSettings.selectedAssistantId);
         
         if (provider) {
-          console.log(`Setting current provider from loaded settings: ${provider.name}`);
           setCurrentProvider(provider);
           providerService.setProvider(provider);
         } else {
@@ -148,7 +140,6 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
             selectedModel: MODELS.OLLAMA.DEFAULT,
             selectedAssistantId: defaultAssistant.id,
           };
-          console.log('Using default settings:', defaultSettings);
           await updateSettings(defaultSettings);
         }
       }
@@ -181,11 +172,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       // Update current provider and assistant if changed
       if (newSettings.selectedProviderId !== undefined) {
-        console.log(`Provider changed to: ${newSettings.selectedProviderId}`);
-        
         const provider = providers.find(p => p.id === newSettings.selectedProviderId);
         if (provider) {
-          console.log(`Setting current provider: ${provider.name}`);
           setCurrentProvider(provider);
           // Also update provider service immediately
           providerService.setProvider(provider);

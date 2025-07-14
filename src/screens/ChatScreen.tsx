@@ -152,15 +152,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       
       if (isCompleteTopicChange) {
         historyLimit = 0; // No context at all
-        console.log('🔄 Complete topic change detected! Sending NO context');
       } else {
         historyLimit = 2; // Minimal context
-        console.log('🔄 Partial topic change detected! Limiting context to', historyLimit, 'messages');
       }
     } else {
       // For continuing conversation, use more context
       historyLimit = 10;
-      console.log('⏩ Continuing conversation, using full context:', historyLimit, 'messages');
     }
 
     // Convert to the format expected by APIs like Anthropic
@@ -189,12 +186,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     const currentLower = currentPrompt.toLowerCase().trim();
     const currentWords = currentLower.split(/\s+/).filter(word => word.length > 0);
     
-    console.log('🔍 Topic detection - Current prompt:', currentPrompt);
-    console.log('🔍 Recent messages count:', recentUserMessages.length);
-    
     // 1. Very short messages (1-3 words) are usually casual/standalone
     if (currentWords.length <= 3) {
-      console.log('✅ Short message detected, treating as topic change');
       return true;
     }
     
@@ -211,7 +204,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     
     const isGreeting = greetingPatterns.some(pattern => pattern.test(currentLower));
     if (isGreeting) {
-      console.log('✅ Greeting pattern detected, treating as topic change');
       return true;
     }
     
@@ -225,7 +217,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     
     const isMetaQuestion = metaQuestions.some(pattern => pattern.test(currentLower));
     if (isMetaQuestion) {
-      console.log('✅ Meta question detected, treating as topic change');
       return true;
     }
     
@@ -241,7 +232,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     
     const hasTopicChangeIndicator = topicChangeIndicators.some(pattern => pattern.test(currentLower));
     if (hasTopicChangeIndicator) {
-      console.log('✅ Topic change indicator detected, treating as topic change');
       return true;
     }
     
@@ -342,11 +332,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       const previousMessages = messages.filter(msg => !msg.id.startsWith('temp-'));
       const messageHistory = buildMessageHistory(previousMessages, text);
       
-      console.log('🧠 ChatScreen - Built message history:', messageHistory.length, 'messages');
-      console.log('🎯 Prompt:', text);
-      if (messageHistory.length > 0) {
-        console.log('📚 Context being sent:', messageHistory);
-      }
       
       
       await providerService.streamResponse(

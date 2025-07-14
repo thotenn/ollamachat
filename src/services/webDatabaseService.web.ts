@@ -11,11 +11,8 @@ class WebDatabaseService implements DatabaseAdapter {
   async initDatabase(): Promise<void> {
     try {
       if (this.db) {
-        console.log('Web database already initialized');
         return;
       }
-      
-      console.log('Initializing web database...');
       
       // Initialize SQL.js
       this.SQL = await initSqlJs({
@@ -26,12 +23,10 @@ class WebDatabaseService implements DatabaseAdapter {
       const savedData = await this.loadFromIndexedDB();
       
       if (savedData) {
-        console.log('Loading existing database from IndexedDB');
         this.db = new this.SQL.Database(savedData);
         // Always check and initialize default data even for existing databases
         await this.ensureDefaultData();
       } else {
-        console.log('Creating new database');
         this.db = new this.SQL.Database();
         await this.createTables();
       }

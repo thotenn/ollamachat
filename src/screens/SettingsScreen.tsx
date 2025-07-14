@@ -154,8 +154,6 @@ const SettingsScreen: React.FC = () => {
 
   const handleProviderChange = async (providerId: string) => {
     try {
-      console.log(`Changing provider to: ${providerId}`);
-      
       // Prevent multiple rapid clicks
       if (isChangingProvider) {
         return;
@@ -165,7 +163,6 @@ const SettingsScreen: React.FC = () => {
       
       // If clicking on the same provider, just reload models instead of clearing everything
       if (settings.selectedProviderId === providerId) {
-        console.log(`Reloading models for current provider: ${providerId}`);
         // Force reload models for the current provider
         await loadModels();
         setTimeout(() => {
@@ -183,8 +180,6 @@ const SettingsScreen: React.FC = () => {
         selectedProviderId: providerId,
         selectedModel: ''
       });
-      
-      console.log(`Provider successfully changed to: ${providerId}`);
       
       // Small delay to ensure state propagation
       setTimeout(() => {

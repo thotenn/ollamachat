@@ -37,7 +37,6 @@ class OllamaService {
                             error.message?.includes('Network Error');
       
       if (isNetworkError && retryCount < maxRetries) {
-        console.log(`Retrying request in ${DEFAULTS.TIMEOUTS.RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, DEFAULTS.TIMEOUTS.RETRY_DELAY));
         return this.generateResponse(request, retryCount + 1);
       }
@@ -51,7 +50,6 @@ class OllamaService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
-    console.log('Starting streaming request...');
     
     try {
       // Use XMLHttpRequest for better React Native compatibility
@@ -75,7 +73,6 @@ class OllamaService {
               const data = JSON.parse(line);
               
               if (data.response) {
-                console.log('Streaming chunk received:', data.response);
                 onChunk(data.response);
               }
               
@@ -95,7 +92,6 @@ class OllamaService {
       };
       
       xhr.onload = () => {
-        console.log('Streaming request completed');
         onComplete(finalContext);
       };
       
@@ -156,7 +152,6 @@ class OllamaService {
                 const data = JSON.parse(line);
                 
                 if (data.response) {
-                  console.log('Fetch streaming chunk:', data.response);
                   onChunk(data.response);
                 }
                 
