@@ -27,7 +27,8 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE"
       ],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.ollamachat.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
