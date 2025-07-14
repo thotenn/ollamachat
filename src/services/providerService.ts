@@ -286,41 +286,135 @@ class AnthropicProviderService extends BaseProviderService {
     onChunk: (chunk: string) => void,
     onComplete: (context?: number[]) => void
   ): Promise<void> {
+    console.log('AnthropicProviderService: Starting streaming request...');
+    
     try {
-      const response = await this.generateResponse(request);
-      
-      // Simulate streaming
-      const words = response.response.split(' ');
-      let currentIndex = 0;
-      
-      const scheduleNext = (callback: () => void) => {
-        if (typeof requestAnimationFrame !== 'undefined') {
-          requestAnimationFrame(callback);
-        } else {
-          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
-        }
+      if (!this.provider.apiKey) {
+        throw new Error('API Key is required for Anthropic');
+      }
+
+      const messages = [];
+
+      // Add message history to maintain context
+      if (request.messageHistory && request.messageHistory.length > 0) {
+        messages.push(...request.messageHistory);
+      }
+
+      // Add the current user message
+      messages.push({ role: 'user', content: request.prompt });
+
+      const requestBody: any = {
+        model: request.model,
+        max_tokens: DEFAULTS.LIMITS.MAX_TOKENS,
+        messages,
+        temperature: request.options?.temperature || 0.7,
+        stream: true,
       };
+
+      // Add system message separately if provided
+      if (request.instructions) {
+        requestBody.system = request.instructions;
+      }
+
+      // Use XMLHttpRequest for better React Native compatibility
+      const xhr = new XMLHttpRequest();
+      let responseBuffer = '';
       
-      const processChunk = () => {
-        if (currentIndex < words.length) {
-          const chunk = words.slice(currentIndex, Math.min(currentIndex + 3, words.length)).join(' ');
-          if (currentIndex + 3 < words.length) {
-            onChunk(chunk + ' ');
-          } else {
-            onChunk(chunk);
+      xhr.open('POST', this.getApiUrl('/messages'), true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('x-api-key', this.provider.apiKey);
+      xhr.setRequestHeader('anthropic-version', URLS.ANTHROPIC.API_VERSION);
+      xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+      
+      // Handle progress events for streaming
+      xhr.onprogress = () => {
+        const newText = xhr.responseText.substring(responseBuffer.length);
+        responseBuffer = xhr.responseText;
+        
+        if (newText) {
+          const lines = newText.split('\n').filter(line => line.trim());
+          
+          for (const line of lines) {
+            try {
+              // Anthropic streaming format: "data: {json}"
+              if (line.startsWith('data: ')) {
+                const jsonStr = line.substring(6);
+                if (jsonStr === '[DONE]') {
+                  continue;
+                }
+                
+                const data = JSON.parse(jsonStr);
+                
+                if (data.type === 'content_block_delta' && data.delta?.text) {
+                  console.log('Anthropic streaming chunk:', data.delta.text);
+                  onChunk(data.delta.text);
+                }
+                
+                if (data.type === 'message_stop') {
+                  // Stream completed
+                  return;
+                }
+                
+                if (data.error) {
+                  throw new Error(data.error.message || 'Anthropic API error');
+                }
+              }
+            } catch (parseError) {
+              // Skip invalid JSON lines
+              console.warn('Failed to parse Anthropic streaming line:', line);
+            }
           }
-          currentIndex += 3;
-          scheduleNext(processChunk);
-        } else {
-          onComplete();
         }
       };
       
-      scheduleNext(processChunk);
+      xhr.onload = () => {
+        console.log('Anthropic streaming request completed');
+        onComplete();
+      };
+      
+      xhr.onerror = () => {
+        throw new Error('Network error during Anthropic streaming');
+      };
+      
+      xhr.ontimeout = () => {
+        throw new Error('Anthropic streaming request timed out');
+      };
+      
+      xhr.timeout = DEFAULTS.TIMEOUTS.LONG;
+      
+      // Send the request
+      xhr.send(JSON.stringify(requestBody));
       
     } catch (error) {
-      onComplete();
-      throw error;
+      console.error('Anthropic streaming failed, falling back to simulated streaming:', error);
+      
+      // Fallback to simulated streaming
+      try {
+        const response = await this.generateResponse(request);
+        
+        // Fast character-by-character streaming for better UX
+        const characters = response.response.split('');
+        let currentIndex = 0;
+        
+        const processChar = () => {
+          if (currentIndex >= characters.length) {
+            onComplete();
+            return;
+          }
+          
+          onChunk(characters[currentIndex]);
+          currentIndex++;
+          
+          // Very fast character streaming
+          setTimeout(processChar, 15);
+        };
+        
+        processChar();
+        
+      } catch (fallbackError) {
+        onComplete();
+        throw fallbackError;
+      }
     }
   }
 
