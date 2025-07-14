@@ -240,11 +240,6 @@ class AnthropicProviderService extends BaseProviderService {
       }
 
       const messages = [];
-      
-      // Add system message with instructions if provided
-      if (request.instructions) {
-        messages.push({ role: 'system', content: request.instructions });
-      }
 
       // Add message history to maintain context
       if (request.messageHistory && request.messageHistory.length > 0) {
@@ -254,12 +249,19 @@ class AnthropicProviderService extends BaseProviderService {
       // Add the current user message
       messages.push({ role: 'user', content: request.prompt });
 
-      const response = await axios.post(this.getApiUrl('/messages'), {
+      const requestBody: any = {
         model: request.model,
         max_tokens: DEFAULTS.LIMITS.MAX_TOKENS,
         messages,
         temperature: request.options?.temperature || 0.7,
-      }, {
+      };
+
+      // Add system message separately if provided
+      if (request.instructions) {
+        requestBody.system = request.instructions;
+      }
+
+      const response = await axios.post(this.getApiUrl('/messages'), requestBody, {
         timeout: DEFAULTS.TIMEOUTS.LONG,
         headers: {
           'Content-Type': 'application/json',
