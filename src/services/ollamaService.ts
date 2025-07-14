@@ -13,7 +13,9 @@ class OllamaService {
     this.baseUrl = url;
   }
 
-  async generateResponse(request: OllamaGenerateRequest): Promise<OllamaResponse> {
+  async generateResponse(request: OllamaGenerateRequest, retryCount = 0): Promise<OllamaResponse> {
+    const maxRetries = 2;
+    
     try {
       const response = await axios.post(`${this.baseUrl}${URLS.OLLAMA.API.GENERATE}`, {
         ...request,
@@ -26,6 +28,20 @@ class OllamaService {
       });
       return response.data;
     } catch (error) {
+      console.error(`Generate response attempt ${retryCount + 1} failed:`, error);
+      
+      // Check if it's a network error and we can retry
+      const isNetworkError = error.code === 'NETWORK_ERROR' || 
+                            error.code === 'ECONNRESET' || 
+                            error.code === 'ECONNREFUSED' ||
+                            error.message?.includes('Network Error');
+      
+      if (isNetworkError && retryCount < maxRetries) {
+        console.log(`Retrying request in ${DEFAULTS.TIMEOUTS.RETRY_DELAY}ms...`);
+        await new Promise(resolve => setTimeout(resolve, DEFAULTS.TIMEOUTS.RETRY_DELAY));
+        return this.generateResponse(request, retryCount + 1);
+      }
+      
       throw error;
     }
   }
@@ -39,36 +55,66 @@ class OllamaService {
       // React Native doesn't support streaming in the same way, so we'll use a non-streaming approach
       const response = await this.generateResponse(request);
       
-      // Simulate streaming by chunking the response
-      const words = response.response.split(' ');
+      // Check response length and limit if necessary
+      const MAX_RESPONSE_LENGTH = 50000; // Characters limit to prevent memory issues
+      let responseText = response.response;
+      if (responseText.length > MAX_RESPONSE_LENGTH) {
+        responseText = responseText.substring(0, MAX_RESPONSE_LENGTH) + '... [Respuesta truncada por seguridad]';
+      }
+      
+      // For very long responses, reduce chunking frequency to prevent performance issues
+      const words = responseText.split(' ');
+      const isLongResponse = words.length > 500;
+      const chunkSize = isLongResponse ? 8 : 3; // Larger chunks for long responses
+      const delay = isLongResponse ? DEFAULTS.TIMEOUTS.DELAY * 2 : DEFAULTS.TIMEOUTS.DELAY;
+      
       let currentIndex = 0;
+      let isProcessing = true;
       
       // Use requestAnimationFrame for web or setTimeout for native
       const scheduleNext = (callback: () => void) => {
+        if (!isProcessing) return; // Safety check
+        
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(callback);
         } else {
-          setTimeout(callback, DEFAULTS.TIMEOUTS.DELAY);
+          setTimeout(callback, delay);
         }
       };
       
       const processChunk = () => {
-        if (currentIndex < words.length) {
-          const chunk = words.slice(currentIndex, Math.min(currentIndex + 3, words.length)).join(' ');
-          if (currentIndex + 3 < words.length) {
+        if (!isProcessing || currentIndex >= words.length) {
+          isProcessing = false;
+          // Pass the context from the response to maintain conversation continuity
+          onComplete(response.context);
+          return;
+        }
+        
+        try {
+          const chunk = words.slice(currentIndex, Math.min(currentIndex + chunkSize, words.length)).join(' ');
+          if (currentIndex + chunkSize < words.length) {
             onChunk(chunk + ' ');
           } else {
             onChunk(chunk);
           }
-          currentIndex += 3;
+          currentIndex += chunkSize;
           scheduleNext(processChunk);
-        } else {
-          // Pass the context from the response to maintain conversation continuity
+        } catch (chunkError) {
+          isProcessing = false;
           onComplete(response.context);
         }
       };
       
       scheduleNext(processChunk);
+      
+      // Safety timeout for very long responses
+      setTimeout(() => {
+        if (isProcessing && currentIndex < words.length) {
+          isProcessing = false;
+          onChunk(words.slice(currentIndex).join(' '));
+          onComplete(response.context);
+        }
+      }, 30000); // 30 seconds max processing time
       
     } catch (error) {
       onComplete();
@@ -93,13 +139,14 @@ class OllamaService {
   async checkConnection(): Promise<boolean> {
     try {
       await axios.get(`${this.baseUrl}/api/tags`, {
-        timeout: DEFAULTS.TIMEOUTS.MEDIUM,
+        timeout: DEFAULTS.TIMEOUTS.SHORT,
         headers: {
           [API_HEADERS.CONTENT_TYPE]: 'application/json',
         },
       });
       return true;
     } catch (error) {
+      console.error('Connection check failed:', error);
       return false;
     }
   }

@@ -6,10 +6,11 @@ export const DEFAULTS = {
     INSTRUCTIONS: 'Eres un asistente útil y amigable. Responde de manera clara y concisa a las preguntas del usuario.',
   },
   TIMEOUTS: {
-    LONG: 30000, // 30 seconds
-    MEDIUM: 10000, // 10 seconds
-    SHORT: 5000, // 5 seconds
+    LONG: 120000, // 2 minutes for generation
+    MEDIUM: 15000, // 15 seconds for model fetching
+    SHORT: 8000, // 8 seconds for connection check
     DELAY: 50, // 50ms
+    RETRY_DELAY: 2000, // 2 seconds between retries
   },
   LIMITS: {
     MAX_TOKENS: 4096,

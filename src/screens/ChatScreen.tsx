@@ -281,6 +281,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         },
         (chunk: string) => {
           fullResponse += chunk;
+          // Throttle updates to reduce re-renders for very long responses
+          const shouldUpdate = fullResponse.length % 50 === 0 || chunk.trim().endsWith('.') || chunk.trim().endsWith('!') || chunk.trim().endsWith('?');
+          
+          if (shouldUpdate || fullResponse.length < 200) {
+            setMessages(previousMessages => {
+              return previousMessages.map(message => 
+                message.id === tempMessage.id 
+                  ? { ...message, text: fullResponse }
+                  : message
+              );
+            });
+          }
+        },
+        async (newContext?: number[]) => {
+          setIsTyping(false);
+          
+          // Final update with complete response
           setMessages(previousMessages => {
             return previousMessages.map(message => 
               message.id === tempMessage.id 
@@ -288,9 +305,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
                 : message
             );
           });
-        },
-        async (newContext?: number[]) => {
-          setIsTyping(false);
           
           // Update context for next conversation
           if (newContext) {
@@ -335,7 +349,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       );
 
     } catch (error) {
-      Alert.alert('Error', 'No se pudo enviar el mensaje');
+      console.error('Error sending message:', error);
+      
+      // More specific error handling
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      const isMemoryError = errorMessage.toLowerCase().includes('memory') || 
+                           errorMessage.toLowerCase().includes('allocation') ||
+                           errorMessage.toLowerCase().includes('heap');
+      
+      Alert.alert(
+        'Error', 
+        isMemoryError 
+          ? 'La respuesta es demasiado larga. Intenta con una pregunta más específica.'
+          : 'No se pudo enviar el mensaje. Verifica tu conexión.'
+      );
+      
       setIsTyping(false);
       
       setMessages(previousMessages => 
