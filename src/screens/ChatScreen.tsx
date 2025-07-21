@@ -3,7 +3,6 @@ import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, Keyboard } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
-import CustomChatBasic from '../components/CustomChatBasic';
 import AssistantModal from '../components/AssistantModal';
 import FloatingProvider from '../components/FloatingProvider';
 import MessageMenu from '../components/MessageMenu';
@@ -14,7 +13,6 @@ import { ChatMessageDB } from '../types';
 import { useCommonAlert } from '../hooks/useCommonAlert';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
-// import { setStringAsync } from 'expo-clipboard';
 
 interface ChatScreenProps {
   conversationId?: string;
@@ -538,7 +536,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         hasContext={!!context}
       />
 
-      <CustomChatBasic
+      <CustomChat
         messages={messages}
         onSendMessage={handleSendMessage}
         onMessagePress={handleMessagePress}
