@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SimpleTypingIndicator from './SimpleTypingIndicator';
@@ -49,6 +51,15 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
       setTimeout(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 100);
+    }
+  };
+
+  const handleInputFocus = () => {
+    if (Platform.OS === 'android') {
+      // On Android, scroll to top when input is focused
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 300);
     }
   };
 
@@ -105,8 +116,8 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
     );
   };
 
-  return (
-    <View style={styles.container}>
+  const renderChatContent = () => (
+    <>
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -130,7 +141,9 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
           multiline
           maxLength={1000}
           onSubmitEditing={handleSend}
+          submitBehavior="newline"
           editable={!disabled}
+          onFocus={handleInputFocus}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || disabled) && styles.sendButtonDisabled]}
@@ -157,7 +170,25 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </>
+  );
+
+  return (
+    <>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView 
+          style={styles.container}
+          behavior="padding"
+          keyboardVerticalOffset={90}
+        >
+          {renderChatContent()}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={[styles.container, styles.androidContainer]}>
+          {renderChatContent()}
+        </View>
+      )}
+    </>
   );
 };
 
@@ -165,6 +196,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
+  },
+  androidContainer: {
+    flex: 1,
   },
   messagesList: {
     flex: 1,
@@ -238,6 +272,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.BACKGROUND.WHITE,
     borderTopWidth: 1,
     borderTopColor: COLORS.BORDER.DEFAULT,
+    ...(Platform.OS === 'android' && {
+      paddingBottom: 12,
+    }),
   },
   textInput: {
     flex: 1,
