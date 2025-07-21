@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,10 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MessageRenderer from './MessageRenderer';
 import TypingIndicator from './TypingIndicator';
+import MessageRenderer from './MessageRenderer';
 import { COLORS } from '@env';
 
 export interface ChatMessage {
@@ -44,46 +42,6 @@ const CustomChat: React.FC<CustomChatProps> = ({
   const [inputText, setInputText] = useState('');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-        // Ensure the list is scrolled to show the latest messages
-        setTimeout(() => {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }, 150);
-      });
-      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-        // Keyboard hidden
-      });
-
-      return () => {
-        keyboardDidShowListener?.remove();
-        keyboardDidHideListener?.remove();
-      };
-    }
-  }, []);
-
-  // Animar la aparición/desaparición del botón de scroll
-  useEffect(() => {
-    Animated.timing(scrollButtonOpacity, {
-      toValue: showScrollButton ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [showScrollButton, scrollButtonOpacity]);
-
-  const handleScroll = (event: any) => {
-    const scrollOffset = event.nativeEvent.contentOffset.y;
-    // Mostrar el botón cuando el usuario se desplace más de 100 píxeles hacia arriba
-    setShowScrollButton(scrollOffset > 100);
-  };
-
-  const scrollToBottom = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-    setShowScrollButton(false);
-  };
 
   const handleSend = () => {
     if (inputText.trim()) {
@@ -103,6 +61,17 @@ const CustomChat: React.FC<CustomChatProps> = ({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       }, 300);
     }
+  };
+
+  const handleScroll = (event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.y;
+    // Mostrar el botón cuando el usuario se desplace más de 100 píxeles hacia arriba
+    setShowScrollButton(scrollOffset > 100);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollButton(false);
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
@@ -147,118 +116,8 @@ const CustomChat: React.FC<CustomChatProps> = ({
     );
   };
 
-  return (
+  const renderChatContent = () => (
     <>
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView 
-          style={styles.container}
-          behavior="padding"
-          keyboardVerticalOffset={90}
-        >
-          <ChatContent
-            isTyping={isTyping}
-            disabled={disabled}
-            flatListRef={flatListRef}
-            messages={messages}
-            renderMessage={renderMessage}
-            renderTypingIndicator={renderTypingIndicator}
-            inputText={inputText}
-            setInputText={setInputText}
-            handleSend={handleSend}
-            handleInputFocus={handleInputFocus}
-            placeholder={placeholder}
-            handleScroll={handleScroll}
-          />
-          {/* Botón de scroll to bottom */}
-          <Animated.View 
-            style={[
-              styles.scrollToBottomButton,
-              { opacity: scrollButtonOpacity }
-            ]}
-            pointerEvents={showScrollButton ? 'auto' : 'none'}
-          >
-            <TouchableOpacity 
-              style={styles.scrollButtonTouchable}
-              onPress={scrollToBottom}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
-            </TouchableOpacity>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={[styles.container, styles.androidContainer]}>
-          <ChatContent
-            isTyping={isTyping}
-            disabled={disabled}
-            flatListRef={flatListRef}
-            messages={messages}
-            renderMessage={renderMessage}
-            renderTypingIndicator={renderTypingIndicator}
-            inputText={inputText}
-            setInputText={setInputText}
-            handleSend={handleSend}
-            handleInputFocus={handleInputFocus}
-            placeholder={placeholder}
-            handleScroll={handleScroll}
-          />
-          {/* Botón de scroll to bottom */}
-          <Animated.View 
-            style={[
-              styles.scrollToBottomButton,
-              { opacity: scrollButtonOpacity }
-            ]}
-            pointerEvents={showScrollButton ? 'auto' : 'none'}
-          >
-            <TouchableOpacity 
-              style={styles.scrollButtonTouchable}
-              onPress={scrollToBottom}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      )}
-    </>
-  );
-};
-
-const ChatContent: React.FC<{
-  isTyping?: boolean;
-  disabled: boolean;
-  flatListRef: React.RefObject<FlatList | null>;
-  messages: ChatMessage[];
-  renderMessage: ({ item }: { item: ChatMessage }) => React.ReactElement | null;
-  renderTypingIndicator: () => React.ReactElement | null;
-  inputText: string;
-  setInputText: (text: string) => void;
-  handleSend: () => void;
-  handleInputFocus: () => void;
-  placeholder: string;
-  handleScroll: (event: any) => void;
-}> = ({
-  isTyping = false,
-  disabled,
-  flatListRef,
-  messages,
-  renderMessage,
-  renderTypingIndicator,
-  inputText,
-  setInputText,
-  handleSend,
-  handleInputFocus,
-  placeholder,
-  handleScroll,
-}) => {
-  return (
-    <>
-      {(disabled && !isTyping) && (
-        <View style={styles.warningContainer}>
-          <Ionicons name="warning-outline" size={16} color={COLORS.TEXT.SECONDARY} />
-          <Text style={styles.warningText}>No conectado al proveedor de IA. Conéctate para enviar mensajes.</Text>
-        </View>
-      )}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -278,7 +137,7 @@ const ChatContent: React.FC<{
           style={[styles.textInput, disabled && styles.textInputDisabled]}
           value={inputText}
           onChangeText={setInputText}
-          placeholder={disabled ? (isTyping ? "Answering..." : "Conecta con un proveedor de IA para enviar mensajes") : placeholder}
+          placeholder={disabled ? (isTyping ? "Answering..." : "Conecta con un proveedor de IA") : placeholder}
           multiline
           maxLength={1000}
           onSubmitEditing={handleSend}
@@ -298,6 +157,37 @@ const ChatContent: React.FC<{
           />
         </TouchableOpacity>
       </View>
+
+      {/* Botón de scroll to bottom sin animaciones */}
+      {showScrollButton && (
+        <View style={styles.scrollToBottomButton}>
+          <TouchableOpacity 
+            style={styles.scrollButtonTouchable}
+            onPress={scrollToBottom}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView 
+          style={styles.container}
+          behavior="padding"
+          keyboardVerticalOffset={90}
+        >
+          {renderChatContent()}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={[styles.container, styles.androidContainer]}>
+          {renderChatContent()}
+        </View>
+      )}
     </>
   );
 };
@@ -308,21 +198,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.BACKGROUND.LIGHTER,
   },
   androidContainer: {
-    flex: 1,
-  },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.BACKGROUND.LIGHT,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.BORDER.DEFAULT,
-  },
-  warningText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: COLORS.TEXT.SECONDARY,
     flex: 1,
   },
   messagesList: {
@@ -345,13 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageBubble: {
-    ...(Platform.OS === 'android' ? {
-      maxWidth: '75%',
-      width: 'auto',
-    } : {
-      maxWidth: '85%',
-      flexShrink: 1,
-    }),
+    maxWidth: '85%',
     minWidth: '20%',
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -365,15 +234,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.BORDER.DEFAULT,
   },
-  typingBubble: {
-    backgroundColor: COLORS.BACKGROUND.TYPING,
-    paddingVertical: 12,
-    minHeight: 'auto',
-    maxWidth: '70%',
-  },
   messageText: {
     fontSize: 16,
     lineHeight: 20,
+    marginBottom: 0,
   },
   userText: {
     color: COLORS.TEXT.WHITE,
@@ -381,10 +245,11 @@ const styles = StyleSheet.create({
   botText: {
     color: COLORS.TEXT.DARK,
   },
-  typingText: {
-    color: COLORS.TEXT.SECONDARY,
-    fontStyle: 'italic',
-    fontSize: 14,
+  typingBubble: {
+    backgroundColor: COLORS.BACKGROUND.TYPING || COLORS.BACKGROUND.WHITE,
+    paddingVertical: 12,
+    minHeight: 'auto',
+    maxWidth: '70%',
   },
   typingIndicator: {
     paddingVertical: 2,
@@ -441,7 +306,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.BACKGROUND.WHITE,
     borderRadius: 25,
     elevation: 4,
-    shadowColor: COLORS.SHADOW.DARK,
+    shadowColor: COLORS.SHADOW?.DARK || '#000',
     shadowOffset: {
       width: 0,
       height: 2,

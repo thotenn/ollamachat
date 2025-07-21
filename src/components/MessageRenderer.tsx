@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import CodeBlock from './CodeBlock';
 import { COLORS } from '@env';
 
@@ -119,24 +119,15 @@ const MessageRenderer: React.FC<MessageRendererProps> = ({ text, isUser }) => {
 
 const styles = StyleSheet.create({
   container: {
-    ...(Platform.OS === 'android' ? {
-      width: '100%',
-      overflow: 'hidden',
-    } : {
-      flex: 1,
-      minHeight: 'auto',
-      width: '100%',
-    }),
+    flex: 1,
+    minHeight: 'auto',
+    width: '100%',
   },
   messageText: {
     fontSize: 16,
     lineHeight: 20,
     marginBottom: 0,
-    ...(Platform.OS === 'android' ? {
-      width: '100%',
-    } : {
-      flexWrap: 'wrap',
-    }),
+    flexWrap: 'wrap',
   },
   userText: {
     color: COLORS.TEXT.WHITE,

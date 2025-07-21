@@ -467,9 +467,11 @@ Release 3: versionCode: 3, version: "1.1.0"
 # To build and install the Android app locally:
 ```bash
 npx expo prebuild
-npx expo run:android
 cd android
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64  ./gradlew clean
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleRelease
+# O crear AAB (Android App Bundle) para Play Store
+# JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew bundleRelease
 adb install app/build/outputs/apk/release/app-release.apk
 
 notes:

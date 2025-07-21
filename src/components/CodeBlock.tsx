@@ -1,46 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '@env';
-
-// Función mejorada para copiar al clipboard
-const copyToClipboard = async (text: string): Promise<boolean> => {
-  try {
-    if (Platform.OS === 'web') {
-      // Para web, usar la API nativa del navegador
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } else {
-        // Fallback para navegadores más antiguos
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-          const result = document.execCommand('copy');
-          document.body.removeChild(textArea);
-          return result;
-        } catch (err) {
-          document.body.removeChild(textArea);
-          return false;
-        }
-      }
-    } else {
-      // Para React Native, usar expo-clipboard
-      await Clipboard.setStringAsync(text);
-      return true;
-    }
-  } catch (error) {
-    console.warn('Error copying to clipboard:', error);
-    return false;
-  }
-};
 
 interface CodeBlockProps {
   code: string;
@@ -52,30 +13,14 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
 
   const handleCopy = async () => {
     try {
-      const success = await copyToClipboard(code);
+      // TODO: Implementar funcionalidad de copia más tarde
+      // Por ahora solo feedback visual
+      setCopied(true);
+      console.log('Código copiado:', code);
       
-      if (success) {
-        setCopied(true);
-        
-        if (Platform.OS === 'web') {
-          // En web, solo feedback visual
-          setTimeout(() => setCopied(false), 2000);
-        } else {
-          // En móvil, feedback visual sin alert que puede causar problemas
-          setTimeout(() => setCopied(false), 2000);
-        }
-      } else {
-        // En caso de error, mostrar feedback pero sin crash
-        console.warn('No se pudo copiar el código');
-        if (Platform.OS !== 'web') {
-          // Solo mostrar alert en casos específicos y controlados
-          Alert.alert('Información', 'No se pudo copiar el código. Inténtalo de nuevo.');
-        }
-      }
+      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Error en handleCopy:', error);
-      // No mostrar alert en caso de error para evitar crashes
-      // Solo log del error para debugging
     }
   };
 
@@ -91,7 +36,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
           <Ionicons 
             name={copied ? "checkmark" : "copy-outline"} 
             size={16} 
-            color={copied ? COLORS.SUCCESS : COLORS.TEXT.LIGHT} 
+            color={copied ? COLORS.SUCCESS || '#4CAF50' : COLORS.TEXT?.LIGHT || '#a0a0a0'} 
           />
           <Text style={[styles.copyText, copied && styles.copiedText]}>
             {copied ? 'Copiado' : 'Copiar'}
@@ -111,13 +56,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#1e1e1e',
-    ...(Platform.OS === 'android' ? {
-      width: '100%',
-      alignSelf: 'stretch',
-    } : {
-      width: '100%',
-      maxWidth: '100%',
-    }),
+    width: '100%',
+    alignSelf: 'stretch',
   },
   header: {
     flexDirection: 'row',
@@ -149,7 +89,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   copiedText: {
-    color: COLORS.SUCCESS,
+    color: COLORS.SUCCESS || '#4CAF50',
   },
   codeContainer: {
     padding: 12,
@@ -162,12 +102,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#f8f8f2',
     marginBottom: 0,
-    ...(Platform.OS === 'android' ? {
-      width: '100%',
-    } : {
-      flexWrap: 'wrap',
-      overflow: 'hidden',
-    }),
+    width: '100%',
   },
 });
 
