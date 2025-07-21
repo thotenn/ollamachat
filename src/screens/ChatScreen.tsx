@@ -3,6 +3,7 @@ import { View, Text, Alert, StyleSheet, TouchableOpacity, Platform, Keyboard } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import CustomChat, { ChatMessage } from '../components/CustomChat';
+import CustomChatBasic from '../components/CustomChatBasic';
 import AssistantModal from '../components/AssistantModal';
 import FloatingProvider from '../components/FloatingProvider';
 import MessageMenu from '../components/MessageMenu';
@@ -13,7 +14,7 @@ import { ChatMessageDB } from '../types';
 import { useCommonAlert } from '../hooks/useCommonAlert';
 import { COLORS } from '@env';
 import { COMMON_STYLES, TYPOGRAPHY, createTextStyle } from '../styles/GlobalStyles';
-import * as Clipboard from 'expo-clipboard';
+// import { setStringAsync } from 'expo-clipboard';
 
 interface ChatScreenProps {
   conversationId?: string;
@@ -328,9 +329,13 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       let fullResponse = '';
       
       // Build message history for context-aware providers (like Anthropic)
-      // Usar los mensajes ANTES de agregar el temporal para evitar incluirlo en el contexto
-      const previousMessages = messages.filter(msg => !msg.id.startsWith('temp-'));
-      const messageHistory = buildMessageHistory(previousMessages, text);
+      // Obtener mensajes actuales para evitar stale closure
+      let messageHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+      setMessages(currentMessages => {
+        const previousMessages = currentMessages.filter(msg => !msg.id.startsWith('temp-'));
+        messageHistory = buildMessageHistory(previousMessages, text);
+        return currentMessages; // No cambiar el estado, solo leer
+      });
       
       
       
@@ -431,7 +436,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         previousMessages.filter(msg => msg.id !== tempMessage.id)
       );
     }
-  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant, messages]);
+  }, [isConnected, settings.selectedModel, context, currentConversationId, messageCount, onConversationChange, currentProvider, currentAssistant]);
 
   const handleClearConversation = useCallback(() => {
     
@@ -460,40 +465,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
     });
   }, [onConversationChange]);
 
-  const copyToClipboard = async (text: string): Promise<boolean> => {
-    try {
-      if (Platform.OS === 'web') {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        } else {
-          const textArea = document.createElement('textarea');
-          textArea.value = text;
-          textArea.style.position = 'fixed';
-          textArea.style.left = '-999999px';
-          textArea.style.top = '-999999px';
-          document.body.appendChild(textArea);
-          textArea.focus();
-          textArea.select();
-          try {
-            const result = document.execCommand('copy');
-            document.body.removeChild(textArea);
-            return result;
-          } catch (err) {
-            document.body.removeChild(textArea);
-            return false;
-          }
-        }
-      } else {
-        await Clipboard.setStringAsync(text);
-        return true;
-      }
-    } catch (error) {
-      console.warn('Error copying to clipboard:', error);
-      return false;
-    }
-  };
-
   const handleMessagePress = (message: ChatMessage) => {
     setSelectedMessage(message);
     setMessageMenuVisible(true);
@@ -501,8 +472,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleCopyMessage = async () => {
     if (selectedMessage) {
-      const success = await copyToClipboard(selectedMessage.text);
-      // El mensaje de confirmación aparece automáticamente por el sistema
+      // TODO: Implementar funcionalidad de copia más tarde
+      console.log('Copia solicitada para:', selectedMessage.text);
     }
     setMessageMenuVisible(false);
     setSelectedMessage(null);
@@ -567,7 +538,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
         hasContext={!!context}
       />
 
-      <CustomChat
+      <CustomChatBasic
         messages={messages}
         onSendMessage={handleSendMessage}
         onMessagePress={handleMessagePress}

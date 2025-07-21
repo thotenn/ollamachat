@@ -4,38 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '@env';
 
-// Función mejorada para copiar al clipboard
+// Función simplificada para copiar al clipboard
 const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
-    if (Platform.OS === 'web') {
-      // Para web, usar la API nativa del navegador
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } else {
-        // Fallback para navegadores más antiguos
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-          const result = document.execCommand('copy');
-          document.body.removeChild(textArea);
-          return result;
-        } catch (err) {
-          document.body.removeChild(textArea);
-          return false;
-        }
-      }
-    } else {
-      // Para React Native, usar expo-clipboard
-      await Clipboard.setStringAsync(text);
-      return true;
-    }
+    // Solo usar expo-clipboard para máxima compatibilidad
+    await Clipboard.setStringAsync(text);
+    return true;
   } catch (error) {
     console.warn('Error copying to clipboard:', error);
     return false;

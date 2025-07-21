@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { COLORS } from '@env';
-import { COMMON_STYLES } from 'src/styles/GlobalStyles';
 
 interface TypingIndicatorProps {
   style?: any;
@@ -28,7 +27,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
         Animated.timing(dot1Opacity, {
           toValue: 1,
           duration: duration,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         
         // Animar punto 2 mientras punto 1 baja
@@ -36,12 +35,12 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
           Animated.timing(dot1Opacity, {
             toValue: 0.3,
             duration: duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(dot2Opacity, {
             toValue: 1,
             duration: duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
         
@@ -50,12 +49,12 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
           Animated.timing(dot2Opacity, {
             toValue: 0.3,
             duration: duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(dot3Opacity, {
             toValue: 1,
             duration: duration,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
         ]),
         
@@ -63,7 +62,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
         Animated.timing(dot3Opacity, {
           toValue: 0.3,
           duration: duration,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         
         // Pequeña pausa antes de reiniciar

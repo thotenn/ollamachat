@@ -70,7 +70,7 @@ const CustomChat: React.FC<CustomChatProps> = ({
     Animated.timing(scrollButtonOpacity, {
       toValue: showScrollButton ? 1 : 0,
       duration: 200,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [showScrollButton, scrollButtonOpacity]);
 
