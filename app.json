@@ -22,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "versionCode": 1,
+      "versionCode": 102,
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
