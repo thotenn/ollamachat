@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import SimpleTypingIndicator from './SimpleTypingIndicator';
+import SimpleMessageRenderer from './SimpleMessageRenderer';
 import { COLORS } from '@env';
 
 export interface ChatMessage {
@@ -36,12 +38,29 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
   disabled = false,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
   const handleSend = () => {
     if (inputText.trim()) {
       onSendMessage(inputText.trim());
       setInputText('');
+      // Scroll to top after sending message
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
     }
+  };
+
+  const handleScroll = (event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.y;
+    // Mostrar el botón cuando el usuario se desplace más de 100 píxeles hacia arriba
+    setShowScrollButton(scrollOffset > 100);
+  };
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setShowScrollButton(false);
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
@@ -62,12 +81,7 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
           styles.messageBubble,
           item.isUser ? styles.userBubble : styles.botBubble
         ]}>
-          <Text style={[
-            styles.messageText,
-            item.isUser ? styles.userText : styles.botText
-          ]}>
-            {item.text}
-          </Text>
+          <SimpleMessageRenderer text={item.text} isUser={item.isUser} />
           <Text style={[
             styles.timestamp,
             item.isUser ? styles.userTimestamp : styles.botTimestamp
@@ -84,8 +98,8 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
     
     return (
       <View style={[styles.messageContainer, styles.botMessage]}>
-        <View style={[styles.messageBubble, styles.botBubble]}>
-          <Text style={styles.typingText}>Escribiendo...</Text>
+        <View style={[styles.messageBubble, styles.botBubble, styles.typingBubble]}>
+          <SimpleTypingIndicator style={styles.typingIndicator} />
         </View>
       </View>
     );
@@ -94,6 +108,7 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
   return (
     <View style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
@@ -102,6 +117,8 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
         inverted
         ListHeaderComponent={renderTypingIndicator}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       />
       
       <View style={styles.inputContainer}>
@@ -127,6 +144,19 @@ const CustomChatBasic: React.FC<CustomChatBasicProps> = ({
           />
         </TouchableOpacity>
       </View>
+
+      {/* Botón de scroll to bottom sin animaciones */}
+      {showScrollButton && (
+        <View style={styles.scrollToBottomButton}>
+          <TouchableOpacity 
+            style={styles.scrollButtonTouchable}
+            onPress={scrollToBottom}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-down" size={24} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -181,10 +211,14 @@ const styles = StyleSheet.create({
   botText: {
     color: COLORS.TEXT.DARK,
   },
-  typingText: {
-    color: COLORS.TEXT.SECONDARY,
-    fontStyle: 'italic',
-    fontSize: 14,
+  typingBubble: {
+    backgroundColor: COLORS.BACKGROUND.TYPING || COLORS.BACKGROUND.WHITE,
+    paddingVertical: 12,
+    minHeight: 'auto',
+    maxWidth: '70%',
+  },
+  typingIndicator: {
+    paddingVertical: 2,
   },
   timestamp: {
     fontSize: 12,
@@ -227,6 +261,30 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    backgroundColor: COLORS.BACKGROUND.WHITE,
+    borderRadius: 25,
+    elevation: 4,
+    shadowColor: COLORS.SHADOW?.DARK || '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER.DEFAULT,
+  },
+  scrollButtonTouchable: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
